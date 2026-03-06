@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================================
+// 計算パターン (Enum)
+// ========================================
+enum CalculationPattern {
+  ADD        // 加算: 開始日から〇ヶ月後/〇年後
+  FIXED      // 固定: 毎年必ず〇月〇日
+  REPEAT     // 反復: 開始日から〇ヶ月ごと
+  MONTH_END  // 月末丸め: 開始日から〇年(〇ヶ月)後の月末
+  MANUAL     // ルールなし: 常に手動入力
+}
+
+// ========================================
+// ユーザー権限 (Enum)
+// ========================================
+enum Role {
+  ADMIN  // 管理者: すべての操作が可能
+  STAFF  // 一般スタッフ: 閲覧・ステータス変更のみ
+}
+
+// ========================================
+// 事業所 (Facility)
+// ========================================
+model Facility {
+  id        String   @id @default(cuid())
+  name      String   // 事業所名
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users         User[]
+  clients       Client[]
+  taskTemplates TaskTemplate[]
+
+  @@map("facilities")
+}
+
+// ========================================
+// スタッフ (User)
+// ========================================
+model User {
+  id         String   @id @default(cuid())
+  facilityId String   @map("facility_id")
+  name       String   // スタッフ名
+  email      String   @unique
+  role       Role     @default(STAFF)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  facility    Facility      @relation(fields: [facilityId], references: [id])
+  taskHistory TaskHistory[]
+
+  @@map("users")
+}
+
+// ========================================
+// 利用者 (Client)
+// ========================================
+model Client {
+  id            String   @id @default(cuid())
+  facilityId    String   @map("facility_id")
+  name          String   // 利用者名
+  admissionDate DateTime @map("admission_date") @db.Date // 利用開始日
+  isActive      Boolean  @default(true) @map("is_active") // 在籍フラグ (退所対応)
+  archivedAt    DateTime? @map("archived_at") // 退所日時
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  facility    Facility     @relation(fields: [facilityId], references: [id])
+  clientTasks ClientTask[]
+
+  @@map("clients")
+}
+
+// ========================================
+// タスクマスタ (TaskTemplate)
+// 事業所管理者が自由に設定できる「期限ルールのマスタ」
+// ========================================
+model TaskTemplate {
+  id                 String             @id @default(cuid())
+  facilityId         String             @map("facility_id")
+  name               String             // 項目名 (例: 支給決定期間)
+  category           String             // 分類 (例: 行政手続き / 内部書類)
+  calculationPattern CalculationPattern @map("calculation_pattern")
+  // 計算ルール詳細 (JSON)
+  // 例: {"unit": "month", "value": 12} → 12ヶ月後
+  // 例: {"month": 4, "day": 1} → 毎年4月1日 (FIXEDパターン)
+  // 例: {"unit": "month", "interval": 6} → 6ヶ月ごと (REPEATパターン)
+  calculationRules   Json               @map("calculation_rules")
+  // アラート段階設定 (JSON)
+  // 例: [{"weeksBefore": 6, "level": "yellow"}, {"weeksBefore": 4, "level": "orange"}, {"weeksBefore": 2, "level": "red"}]
+  alertSteps         Json               @map("alert_steps")
+  // ステータスフロー定義 (JSON)
+  // 例: ["未対応", "案内済み（提出待ち）", "完了（更新）"]
+  statusFlow         Json               @map("status_flow")
+  isDefault          Boolean            @default(false) @map("is_default") // デフォルト項目フラグ
+  sortOrder          Int                @default(0) @map("sort_order") // 表示順
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  facility    Facility     @relation(fields: [facilityId], references: [id])
+  clientTasks ClientTask[]
+
+  @@map("task_templates")
+}
+
+// ========================================
+// 利用者タスク (ClientTask)
+// マスタを元に利用者ごとの「実際の期限や進捗」を管理
+// ========================================
+model ClientTask {
+  id            String    @id @default(cuid())
+  clientId      String    @map("client_id")
+  templateId    String    @map("template_id")
+  startDate     DateTime  @map("start_date") @db.Date // 対象期間(開始)
+  endDate       DateTime  @map("end_date") @db.Date   // 期限・対象期間(終了)
+  currentStatus String    @map("current_status")       // 現在の進捗ステータス
+  completedAt   DateTime? @map("completed_at")         // 完了日時
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  client      Client        @relation(fields: [clientId], references: [id])
+  template    TaskTemplate  @relation(fields: [templateId], references: [id])
+  taskHistory TaskHistory[]
+
+  @@map("client_tasks")
+}
+
+// ========================================
+// タスク履歴 (TaskHistory)
+// ステータス変更の監査証跡
+// ========================================
+model TaskHistory {
+  id           String   @id @default(cuid())
+  clientTaskId String   @map("client_task_id")
+  userId       String   @map("user_id") // 操作者
+  oldStatus    String   @map("old_status")
+  newStatus    String   @map("new_status")
+  changedAt    DateTime @default(now()) @map("changed_at")
+
+  clientTask ClientTask @relation(fields: [clientTaskId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@map("task_histories")
+}
