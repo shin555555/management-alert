@@ -26,7 +26,10 @@ export default function RootLayout({
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-y-auto bg-background">
-            <div className="p-6 lg:p-8">{children}</div>
+            {/* モバイルではヘッダー分のpadding-topを追加 */}
+            <div className="p-4 pt-[calc(3.5rem+1rem)] md:p-6 md:pt-6 lg:p-8 lg:pt-8">
+              {children}
+            </div>
           </main>
         </div>
       </body>
