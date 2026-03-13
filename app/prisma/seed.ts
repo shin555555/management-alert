@@ -5,9 +5,14 @@
  * 初期事業所・管理者ユーザーを作成する。
  *
  * 実行: npx prisma db seed
+ *
+ * デフォルトパスワード:
+ *   管理者: admin@example.com / admin1234
+ *   スタッフ: staff@example.com / staff1234
  */
 
 import { PrismaClient, CalculationPattern, Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -30,28 +35,32 @@ async function main() {
   // ========================================
   // 2. 管理者ユーザーの作成
   // ========================================
+  const adminPassword = await bcrypt.hash("admin1234", 12);
   const admin = await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: {},
+    update: { password: adminPassword },
     create: {
       id: "default-admin",
       facilityId: facility.id,
       name: "管理者",
       email: "admin@example.com",
+      password: adminPassword,
       role: Role.ADMIN,
     },
   });
   console.log(`✅ 管理者: ${admin.name} (${admin.email})`);
 
   // 一般スタッフの作成
+  const staffPassword = await bcrypt.hash("staff1234", 12);
   const staff = await prisma.user.upsert({
     where: { email: "staff@example.com" },
-    update: {},
+    update: { password: staffPassword },
     create: {
       id: "default-staff",
       facilityId: facility.id,
       name: "サービス管理責任者",
       email: "staff@example.com",
+      password: staffPassword,
       role: Role.STAFF,
     },
   });

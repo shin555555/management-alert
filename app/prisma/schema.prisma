@@ -52,6 +52,7 @@ model User {
   facilityId String   @map("facility_id")
   name       String   // スタッフ名
   email      String   @unique
+  password   String?  // ハッシュ化されたパスワード
   role       Role     @default(STAFF)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
