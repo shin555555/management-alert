@@ -31,7 +31,8 @@ AIエージェントは、このロードマップに沿って段階的に実装
 - [x] 利用者の退所処理（アーカイブ）機能と履歴閲覧ビューの実装
 - [x] UI/UXの最終調整（スマートフォン対応、レスポンシブ崩れの修正）
 
-## インフラ作業（DB接続後に実施）
-- [ ] `DATABASE_URL` を実際の接続文字列に更新 (`.env`)
-- [ ] `npx prisma migrate dev --name add-password-to-user` を実行（passwordカラム追加）
-- [ ] `npx prisma db seed` を実行（初期ユーザー・テンプレートデータ投入）
+## インフラ作業
+- [x] `DATABASE_URL` を実際の接続文字列に更新 (`.env`) — ローカルPostgreSQL 17 (winget)
+- [x] `npx prisma migrate dev --name add-password-to-user` を実行（passwordカラム追加）
+- [x] `npx prisma db seed` を実行（初期ユーザー・テンプレートデータ投入）
+- [x] Prisma v7 対応: `@prisma/adapter-pg` + `driverAdapters` プレビュー機能を導入
