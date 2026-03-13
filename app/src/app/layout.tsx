@@ -3,6 +3,7 @@ import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { auth } from "@/auth";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -28,18 +29,20 @@ export default async function RootLayout({
       <body className={`${notoSansJP.variable} font-sans antialiased`}>
         {session ? (
           // ログイン済み: サイドバー付きレイアウト
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar
-              role={session.user.role ?? "STAFF"}
-              userName={session.user.name ?? ""}
-            />
-            <main className="flex-1 overflow-y-auto bg-background">
-              {/* モバイルではヘッダー分のpadding-topを追加 */}
-              <div className="p-4 pt-[calc(3.5rem+1rem)] md:p-6 md:pt-6 lg:p-8 lg:pt-8">
-                {children}
-              </div>
-            </main>
-          </div>
+          <TooltipProvider>
+            <div className="flex h-screen overflow-hidden">
+              <Sidebar
+                role={session.user.role ?? "STAFF"}
+                userName={session.user.name ?? ""}
+              />
+              <main className="flex-1 overflow-y-auto bg-background">
+                {/* モバイルではヘッダー分のpadding-topを追加 */}
+                <div className="p-4 pt-[calc(3.5rem+1rem)] md:p-6 md:pt-6 lg:p-8 lg:pt-8">
+                  {children}
+                </div>
+              </main>
+            </div>
+          </TooltipProvider>
         ) : (
           // 未ログイン: ログインページ等をそのまま表示
           <>{children}</>
