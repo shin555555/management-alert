@@ -14,6 +14,7 @@ import {
     X,
     LogOut,
     UserCircle,
+    UserCog,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,12 @@ const adminItems = [
         href: "/settings",
         icon: Settings,
         description: "期限ルール・項目管理",
+    },
+    {
+        label: "ユーザー管理",
+        href: "/settings/users",
+        icon: UserCog,
+        description: "スタッフの追加・変更",
     },
 ];
 

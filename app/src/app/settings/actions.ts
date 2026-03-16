@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { CalculationPattern, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 
 // ========================================
 // 型定義
@@ -67,8 +68,9 @@ export async function createTaskTemplate(
   data: TaskTemplateFormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // デフォルト事業所IDを使用
-    const facilityId = "default-facility";
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "未認証です" };
+    const facilityId = session.user.facilityId;
 
     await prisma.taskTemplate.create({
       data: {

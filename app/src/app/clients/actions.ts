@@ -9,11 +9,21 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 import {
   calculateEndDate,
   type CalculationPattern,
   type CalculationRules,
 } from "@/lib/date-calculation";
+
+// ========================================
+// セッション取得ヘルパー
+// ========================================
+async function getSession() {
+  const session = await auth();
+  if (!session?.user) throw new Error("未認証です");
+  return session;
+}
 
 // ========================================
 // 型定義
@@ -73,8 +83,10 @@ export interface NewClientFormData {
 // ========================================
 export async function getActiveClients(): Promise<ClientListItem[]> {
   try {
+    const session = await getSession();
+    const facilityId = session.user.facilityId;
     const clients = await prisma.client.findMany({
-      where: { isActive: true },
+      where: { isActive: true, facilityId },
       orderBy: { name: "asc" },
       include: {
         clientTasks: {
@@ -183,8 +195,10 @@ export async function getTemplatesForNewClient(): Promise<
   }>
 > {
   try {
+    const session = await getSession();
+    const facilityId = session.user.facilityId;
     const templates = await prisma.taskTemplate.findMany({
-      where: { isDefault: true },
+      where: { isDefault: true, facilityId },
       orderBy: { sortOrder: "asc" },
     });
 
@@ -209,7 +223,8 @@ export async function createClient(
   data: NewClientFormData
 ): Promise<{ success: boolean; clientId?: string; error?: string }> {
   try {
-    const facilityId = "default-facility";
+    const session = await getSession();
+    const facilityId = session.user.facilityId;
     const admissionDate = new Date(data.admissionDate);
 
     const client = await prisma.client.create({
@@ -262,10 +277,11 @@ export async function createClient(
 // ========================================
 export async function updateTaskStatus(
   taskId: string,
-  newStatus: string,
-  userId: string = "default-admin"
+  newStatus: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const session = await getSession();
+    const userId = session.user.id;
     const task = await prisma.clientTask.findUnique({
       where: { id: taskId },
       include: { template: true },
@@ -337,10 +353,11 @@ export async function updateTaskDates(
 // ワンクリック更新（次回期限の自動計算）
 // ========================================
 export async function renewTask(
-  taskId: string,
-  userId: string = "default-admin"
+  taskId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const session = await getSession();
+    const userId = session.user.id;
     const task = await prisma.clientTask.findUnique({
       where: { id: taskId },
       include: { template: true },
@@ -431,7 +448,8 @@ export async function registerExistingClient(
   data: ExistingClientFormData
 ): Promise<{ success: boolean; clientId?: string; error?: string }> {
   try {
-    const facilityId = "default-facility";
+    const session = await getSession();
+    const facilityId = session.user.facilityId;
     const admissionDate = new Date(data.admissionDate);
 
     // スキップしないタスクのみを対象にする

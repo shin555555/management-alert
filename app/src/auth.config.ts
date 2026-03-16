@@ -41,13 +41,15 @@ export const authConfig = {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        token.facilityId = (user as { facilityId?: string }).facilityId;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
+        session.user.role = token.role as string;
+        session.user.facilityId = token.facilityId as string;
       }
       return session;
     },
