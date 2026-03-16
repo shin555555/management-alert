@@ -409,6 +409,77 @@ export async function renewTask(
 }
 
 // ========================================
+// 既存在籍者登録（自動計算スキップ・手入力）
+// ========================================
+
+export interface ExistingClientTaskInput {
+  templateId: string;
+  startDate: string; // ISO形式 "YYYY-MM-DD"
+  endDate: string | null; // ISO形式。MANUALや期不明の場合はnull
+  currentStatus: string;
+  skip: boolean; // trueの場合このタスクはスキップ（次回サイクルから管理開始）
+}
+
+export interface ExistingClientFormData {
+  name: string;
+  admissionDate: string; // ISO形式
+  memo?: string;
+  tasks: ExistingClientTaskInput[];
+}
+
+export async function registerExistingClient(
+  data: ExistingClientFormData
+): Promise<{ success: boolean; clientId?: string; error?: string }> {
+  try {
+    const facilityId = "default-facility";
+    const admissionDate = new Date(data.admissionDate);
+
+    // スキップしないタスクのみを対象にする
+    const activeTasks = data.tasks.filter((t) => !t.skip);
+
+    const client = await prisma.client.create({
+      data: {
+        facilityId,
+        name: data.name,
+        admissionDate,
+        isActive: true,
+        clientTasks: {
+          create: activeTasks
+            .filter((t) => t.endDate !== null)
+            .map((task) => ({
+              templateId: task.templateId,
+              startDate: new Date(task.startDate),
+              endDate: new Date(task.endDate!),
+              currentStatus: task.currentStatus,
+            })),
+        },
+      },
+    });
+
+    // endDateがnullのタスク（MANUAL等）も別途登録
+    const nullEndTasks = activeTasks.filter((t) => t.endDate === null);
+    if (nullEndTasks.length > 0) {
+      await prisma.clientTask.createMany({
+        data: nullEndTasks.map((task) => ({
+          clientId: client.id,
+          templateId: task.templateId,
+          startDate: new Date(task.startDate),
+          endDate: new Date(task.startDate), // 手動入力のため仮値
+          currentStatus: task.currentStatus,
+        })),
+      });
+    }
+
+    revalidatePath("/clients");
+    revalidatePath("/dashboard");
+    return { success: true, clientId: client.id };
+  } catch (error) {
+    console.error("既存在籍者登録エラー:", error);
+    return { success: false, error: "利用者の登録に失敗しました" };
+  }
+}
+
+// ========================================
 // 退所処理
 // ========================================
 export async function archiveClient(
