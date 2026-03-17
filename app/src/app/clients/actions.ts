@@ -584,6 +584,28 @@ export async function getMissingTemplates(
 }
 
 // ========================================
+// タスク削除
+// ========================================
+export async function deleteTask(
+  taskId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 関連する履歴も削除（外部キー制約）
+    await prisma.$transaction([
+      prisma.taskHistory.deleteMany({ where: { clientTaskId: taskId } }),
+      prisma.clientTask.delete({ where: { id: taskId } }),
+    ]);
+
+    revalidatePath("/clients");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("タスク削除エラー:", error);
+    return { success: false, error: "タスクの削除に失敗しました" };
+  }
+}
+
+// ========================================
 // 退所処理
 // ========================================
 export async function archiveClient(

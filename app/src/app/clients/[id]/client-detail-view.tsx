@@ -14,12 +14,11 @@ import {
   Calendar,
   CheckCircle2,
   ChevronRight,
-  Clock,
-  AlertTriangle,
   RotateCcw,
   Archive,
   Pencil,
   Save,
+  Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +33,7 @@ import {
   renewTask,
   archiveClient,
   addTaskToClient,
+  deleteTask,
 } from "../actions";
 import { determineAlertLevel, type AlertStep } from "@/lib/date-calculation";
 import { formatToWareki, formatToISO } from "@/lib/wareki";
@@ -210,6 +210,7 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [editStartDate, setEditStartDate] = useState<Date | null>(
     new Date(task.startDate)
   );
@@ -307,16 +308,60 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
           )}
         </div>
 
-        {/* 日付編集ボタン */}
-        {!isCompleted && !isEditing && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </Button>
+        {/* 編集・削除ボタン */}
+        {!isEditing && (
+          <div className="flex items-center gap-1">
+            {!isCompleted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            {deleteConfirm ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-destructive">削除？</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-7 text-xs px-2"
+                  disabled={isPending}
+                  onClick={() => {
+                    startTransition(async () => {
+                      const result = await deleteTask(task.id);
+                      if (result.success) {
+                        router.refresh();
+                      } else {
+                        alert(result.error);
+                      }
+                    });
+                  }}
+                >
+                  {isPending ? "..." : "はい"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs px-2"
+                  onClick={() => setDeleteConfirm(false)}
+                >
+                  いいえ
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => setDeleteConfirm(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
