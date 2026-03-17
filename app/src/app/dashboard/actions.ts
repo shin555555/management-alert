@@ -90,24 +90,11 @@ export async function getDashboardData(): Promise<DashboardData> {
       };
     });
 
-    // アラート対象または進行中（未対応でないもの）をフィルタリング
-    // 要件: "期限が近づいているタスク（アラート判定）、または「進行中（未対応以外、完了未満）」のタスクのみ"
+    // 未完了タスクをすべて表示（完了ステータスのものだけ除外）
     const filteredTasks = tasks.filter((task) => {
       const lastStatus = task.statusFlow[task.statusFlow.length - 1];
       const isCompleted = task.currentStatus === lastStatus;
-      if (isCompleted) return false;
-
-      // アラートが発動しているもの
-      if (task.alertLevel) return true;
-
-      // 進行中（未対応でない、かつ完了でない）のもの
-      const firstStatus = task.statusFlow[0];
-      if (task.currentStatus !== firstStatus) return true;
-
-      // 期限超過しているもの
-      if (new Date(task.endDate) < now) return true;
-
-      return false;
+      return !isCompleted;
     });
 
     // サマリー計算
@@ -115,10 +102,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       red: filteredTasks.filter((t) => t.alertLevel === "red").length,
       orange: filteredTasks.filter((t) => t.alertLevel === "orange").length,
       yellow: filteredTasks.filter((t) => t.alertLevel === "yellow").length,
-      inProgress: filteredTasks.filter((t) => {
-        const firstStatus = t.statusFlow[0];
-        return t.currentStatus !== firstStatus && !t.alertLevel;
-      }).length,
+      inProgress: filteredTasks.filter((t) => !t.alertLevel && new Date(t.endDate) >= now).length,
       overdue: filteredTasks.filter(
         (t) => new Date(t.endDate) < now && !t.alertLevel
       ).length,

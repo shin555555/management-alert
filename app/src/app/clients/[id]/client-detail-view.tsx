@@ -33,6 +33,7 @@ import {
   updateTaskDates,
   renewTask,
   archiveClient,
+  addTaskToClient,
 } from "../actions";
 import { determineAlertLevel, type AlertStep } from "@/lib/date-calculation";
 import { formatToWareki, formatToISO } from "@/lib/wareki";
@@ -41,8 +42,17 @@ import { formatToWareki, formatToISO } from "@/lib/wareki";
 // 型定義
 // ========================================
 
+interface MissingTemplate {
+  id: string;
+  name: string;
+  category: string;
+  calculationPattern: string;
+  statusFlow: string[];
+}
+
 interface ClientDetailViewProps {
   client: ClientDetail;
+  missingTemplates: MissingTemplate[];
 }
 
 // アラートレベルの色
@@ -68,7 +78,7 @@ const ALERT_LABELS: Record<string, string> = {
 // メインコンポーネント
 // ========================================
 
-export function ClientDetailView({ client }: ClientDetailViewProps) {
+export function ClientDetailView({ client, missingTemplates }: ClientDetailViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveConfirm, setArchiveConfirm] = useState(false);
@@ -170,6 +180,22 @@ export function ClientDetailView({ client }: ClientDetailViewProps) {
       {client.tasks.length === 0 && (
         <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground">
           <p className="text-sm">タスクがまだ登録されていません</p>
+        </div>
+      )}
+
+      {/* 未登録テンプレートの追加セクション */}
+      {missingTemplates.length > 0 && client.isActive && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            未登録の管理項目
+          </h2>
+          {missingTemplates.map((template) => (
+            <AddTaskCard
+              key={template.id}
+              clientId={client.id}
+              template={template}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -344,11 +370,12 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
         </div>
       )}
 
-      {/* ステータスフロー表示 */}
+      {/* ステータスフロー表示（クリックで任意のステータスに変更可能） */}
       <div className="flex flex-wrap items-center gap-1">
         {statusFlow.map((status, i) => {
           const isCurrent = status === task.currentStatus;
           const isPast = i < currentIndex;
+          const canClick = !isCurrent && !isPending;
 
           return (
             <React.Fragment key={i}>
@@ -362,7 +389,20 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
                 }
                 className={`text-[11px] ${
                   isPast ? "opacity-50" : ""
-                } ${isCurrent ? "ring-2 ring-primary/30" : ""}`}
+                } ${isCurrent ? "ring-2 ring-primary/30" : ""} ${
+                  canClick ? "cursor-pointer hover:opacity-80" : ""
+                }`}
+                onClick={() => {
+                  if (!canClick) return;
+                  startTransition(async () => {
+                    const result = await updateTaskStatus(task.id, status);
+                    if (result.success) {
+                      router.refresh();
+                    } else {
+                      alert(result.error);
+                    }
+                  });
+                }}
               >
                 {isPast && <CheckCircle2 className="w-3 h-3 mr-0.5" />}
                 {status}
@@ -405,6 +445,106 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
               {isPending ? "更新中..." : "前回と同じルールで更新する"}
             </Button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ========================================
+// 未登録テンプレート追加カード
+// ========================================
+
+function AddTaskCard({
+  clientId,
+  template,
+}: {
+  clientId: string;
+  template: MissingTemplate;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
+  const handleAdd = () => {
+    if (!startDate || !endDate) return;
+    startTransition(async () => {
+      const result = await addTaskToClient(
+        clientId,
+        template.id,
+        formatToISO(startDate),
+        formatToISO(endDate),
+        template.statusFlow[0]
+      );
+      if (result.success) {
+        setIsExpanded(false);
+        router.refresh();
+      } else {
+        alert(result.error);
+      }
+    });
+  };
+
+  return (
+    <div className="rounded-xl border-2 border-dashed border-muted p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium text-muted-foreground">{template.name}</h3>
+          <Badge variant="outline" className="text-[10px]">
+            未登録
+          </Badge>
+        </div>
+        {!isExpanded && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExpanded(true)}
+            className="gap-1.5"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            追加する
+          </Button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <DateInput
+              label="開始日"
+              value={startDate}
+              onChange={setStartDate}
+            />
+            <DateInput
+              label="終了日（期限）"
+              value={endDate}
+              onChange={setEndDate}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setIsExpanded(false);
+                setStartDate(null);
+                setEndDate(null);
+              }}
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              キャンセル
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={isPending || !startDate || !endDate}
+            >
+              <Save className="w-3.5 h-3.5 mr-1" />
+              {isPending ? "追加中..." : "タスクを追加"}
+            </Button>
+          </div>
         </div>
       )}
     </div>

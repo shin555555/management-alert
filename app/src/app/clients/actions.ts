@@ -498,6 +498,92 @@ export async function registerExistingClient(
 }
 
 // ========================================
+// タスク個別追加（スキップしたテンプレートを後から追加）
+// ========================================
+export async function addTaskToClient(
+  clientId: string,
+  templateId: string,
+  startDate: string,
+  endDate: string,
+  currentStatus: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 既に同じテンプレートのアクティブなタスクがないか確認
+    const existing = await prisma.clientTask.findFirst({
+      where: { clientId, templateId, completedAt: null },
+    });
+    if (existing) {
+      return { success: false, error: "このテンプレートの未完了タスクが既に存在します" };
+    }
+
+    await prisma.clientTask.create({
+      data: {
+        clientId,
+        templateId,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        currentStatus,
+      },
+    });
+
+    revalidatePath("/clients");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("タスク追加エラー:", error);
+    return { success: false, error: "タスクの追加に失敗しました" };
+  }
+}
+
+// ========================================
+// 未登録テンプレート一覧取得（利用者詳細画面用）
+// ========================================
+export async function getMissingTemplates(
+  clientId: string
+): Promise<
+  Array<{
+    id: string;
+    name: string;
+    category: string;
+    calculationPattern: string;
+    statusFlow: string[];
+  }>
+> {
+  try {
+    const session = await getSession();
+    const facilityId = session.user.facilityId;
+
+    // この利用者が持っているテンプレートID（未完了のもの）
+    const existingTasks = await prisma.clientTask.findMany({
+      where: { clientId, completedAt: null },
+      select: { templateId: true },
+    });
+    const existingTemplateIds = existingTasks.map((t) => t.templateId);
+
+    // 事業所のデフォルトテンプレートのうち、まだ登録されていないもの
+    const templates = await prisma.taskTemplate.findMany({
+      where: {
+        facilityId,
+        isDefault: true,
+        id: { notIn: existingTemplateIds },
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return templates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      category: t.category,
+      calculationPattern: t.calculationPattern,
+      statusFlow: t.statusFlow as string[],
+    }));
+  } catch (error) {
+    console.error("未登録テンプレート取得エラー:", error);
+    return [];
+  }
+}
+
+// ========================================
 // 退所処理
 // ========================================
 export async function archiveClient(

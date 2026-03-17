@@ -33,11 +33,15 @@ const REIWA_START_YEAR = 2018; // 令和1年 = 2019年 → 2018 + 1
  *
  * 対応フォーマット:
  *   - "R90228"  → 令和9年2月28日 → 2027-02-28
+ *   - "R50201"  → 令和5年2月1日  → 2023-02-01（5桁対応）
  *   - "090228"  → 令和9年2月28日 → 2027-02-28
  *   - "R70401"  → 令和7年4月1日  → 2025-04-01
  *   - "070401"  → 令和7年4月1日  → 2025-04-01
  *   - "R120401" → 令和12年4月1日 → 2030-04-01
  *   - "120401"  → 令和12年4月1日 → 2030-04-01
+ *   - "令和5年2月1日" → 2023-02-01（日本語表記）
+ *   - "令和5年2月01日" → 2023-02-01
+ *   - "R5年2月1日" → 2023-02-01
  *
  * また、西暦入力（8桁: "20270228"）にも対応する。
  *
@@ -52,6 +56,24 @@ export function parseWarekiInput(input: string): WarekiParseResult {
     return { success: false, date: null, formatted: null, error: "入力が空です" };
   }
 
+  // 日本語表記パース: 「令和5年2月1日」「令和12年10月31日」
+  const jaWarekiMatch = cleaned.match(/^令和(\d{1,2})年(\d{1,2})月(\d{1,2})日?$/);
+  if (jaWarekiMatch) {
+    const reiwaYear = parseInt(jaWarekiMatch[1], 10);
+    const month = parseInt(jaWarekiMatch[2], 10);
+    const day = parseInt(jaWarekiMatch[3], 10);
+    return buildResult(REIWA_START_YEAR + reiwaYear, month, day);
+  }
+
+  // 「R5年2月1日」「R12年10月31日」形式
+  const rJaMatch = cleaned.match(/^[Rr](\d{1,2})年(\d{1,2})月(\d{1,2})日?$/);
+  if (rJaMatch) {
+    const reiwaYear = parseInt(rJaMatch[1], 10);
+    const month = parseInt(rJaMatch[2], 10);
+    const day = parseInt(rJaMatch[3], 10);
+    return buildResult(REIWA_START_YEAR + reiwaYear, month, day);
+  }
+
   // 西暦8桁チェック (例: "20270228")
   if (/^\d{8}$/.test(cleaned)) {
     const year = parseInt(cleaned.substring(0, 4), 10);
@@ -63,19 +85,15 @@ export function parseWarekiInput(input: string): WarekiParseResult {
     }
   }
 
-  // 和暦パターン: "R" + 数字 or 数字のみ
-  let reiwaYear: number;
-  let monthDay: string;
-
-  // "R" プレフィックス付き
+  // "R" プレフィックス付き数字のみ
   const rMatch = cleaned.match(/^[Rr](\d+)$/);
   if (rMatch) {
     const digits = rMatch[1];
     return parseReiwaDigits(digits);
   }
 
-  // 数字のみ (6桁 or 7桁)
-  if (/^\d{6,7}$/.test(cleaned)) {
+  // 数字のみ (5〜7桁)
+  if (/^\d{5,7}$/.test(cleaned)) {
     return parseReiwaDigits(cleaned);
   }
 
@@ -83,26 +101,31 @@ export function parseWarekiInput(input: string): WarekiParseResult {
     success: false,
     date: null,
     formatted: null,
-    error: "認識できない形式です。\"R90228\" または \"090228\" の形式で入力してください。",
+    error: "認識できない形式です。「令和5年2月1日」「R50201」「20230201」等の形式で入力してください。",
   };
 }
 
 /**
  * 和暦の数字部分をパースする。
  *
- * 6桁: 最初の1桁 = 年（1桁）, 残り4桁 = 月日
- * 7桁: 最初の2桁 = 年（2桁）, 残り4桁 = 月日
+ * 5桁: 最初の1桁 = 年（1桁）, 残り4桁 = 月日 (例: "50201" → 令和5年02月01日)
+ * 6桁: 最初の2桁 = 年（2桁）, 残り4桁 = 月日 (例: "090228" → 令和9年02月28日)
+ * 7桁: 最初の3桁 = 年（2桁+0埋め）, 残り4桁 = 月日 (例: "0120401" → 令和12年04月01日)
  */
 function parseReiwaDigits(digits: string): WarekiParseResult {
   let reiwaYear: number;
   let monthDay: string;
 
-  if (digits.length === 6) {
-    // 1桁年 (例: "90228" → 令和9年, "0228")
+  if (digits.length === 5) {
+    // 年1桁 (例: "50201" → 令和5年, "0201")
+    reiwaYear = parseInt(digits.substring(0, 1), 10);
+    monthDay = digits.substring(1);
+  } else if (digits.length === 6) {
+    // 年2桁 (例: "090228" → 令和9年, "0228")
     reiwaYear = parseInt(digits.substring(0, 2), 10);
     monthDay = digits.substring(2);
   } else if (digits.length === 7) {
-    // 2桁年 (例: "120401" → 令和12年, "0401")
+    // 年3桁 (例: "0120401" → 令和12年, "0401")
     reiwaYear = parseInt(digits.substring(0, 3), 10);
     monthDay = digits.substring(3);
   } else {
@@ -110,7 +133,7 @@ function parseReiwaDigits(digits: string): WarekiParseResult {
       success: false,
       date: null,
       formatted: null,
-      error: "桁数が正しくありません。",
+      error: "桁数が正しくありません。「R50201」「090228」等の形式で入力してください。",
     };
   }
 

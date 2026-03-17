@@ -45,7 +45,7 @@ export function DateInput({
   value,
   onChange,
   label,
-  placeholder = "R90228 / 20270228",
+  placeholder = "令和9年2月28日 / R90228",
   disabled = false,
   error,
   className,
@@ -213,7 +213,7 @@ export function DateInput({
         {/* フォーカス中のヒント */}
         {isFocused && (
           <div className="absolute -bottom-5 left-0 text-[11px] text-muted-foreground">
-            和暦: R90228 ／ ↑↓: ±1日
+            令和○年○月○日 / R90228 ／ ↑↓: ±1日
           </div>
         )}
       </div>

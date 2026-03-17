@@ -223,11 +223,15 @@ function TaskRow({ task }: { task: DashboardTask }) {
   const alertConfig = task.alertLevel
     ? ALERT_CONFIG[task.alertLevel]
     : null;
+  const firstStatus = statusFlow[0];
+  const isWaiting = task.currentStatus === firstStatus;
   const borderColor = alertConfig
     ? alertConfig.rowBorder
     : isOverdue
       ? "border-l-red-300"
-      : "border-l-blue-300";
+      : isWaiting
+        ? "border-l-gray-300"
+        : "border-l-blue-300";
 
   // 期限までの残り日数
   const daysUntil = Math.ceil(
@@ -247,6 +251,10 @@ function TaskRow({ task }: { task: DashboardTask }) {
         ) : isOverdue ? (
           <Badge variant="destructive" className="text-[10px]">
             超過
+          </Badge>
+        ) : isWaiting ? (
+          <Badge variant="outline" className="text-[10px]">
+            未対応
           </Badge>
         ) : (
           <Badge variant="secondary" className="text-[10px]">

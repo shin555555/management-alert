@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getClientDetail } from "../actions";
+import { getClientDetail, getMissingTemplates } from "../actions";
 import { ClientDetailView } from "./client-detail-view";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +24,14 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const client = await getClientDetail(id);
+  const [client, missingTemplates] = await Promise.all([
+    getClientDetail(id),
+    getMissingTemplates(id),
+  ]);
 
   if (!client) {
     notFound();
   }
 
-  return <ClientDetailView client={client} />;
+  return <ClientDetailView client={client} missingTemplates={missingTemplates} />;
 }
