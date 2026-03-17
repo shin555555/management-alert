@@ -31,6 +31,7 @@ import {
   updateTaskStatus,
   updateTaskDates,
   renewTask,
+  getNextDates,
   archiveClient,
   addTaskToClient,
   deleteTask,
@@ -217,6 +218,11 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
   const [editEndDate, setEditEndDate] = useState<Date | null>(
     new Date(task.endDate)
   );
+  // 更新ダイアログ
+  const [showRenewDialog, setShowRenewDialog] = useState(false);
+  const [renewStartDate, setRenewStartDate] = useState<Date | null>(null);
+  const [renewEndDate, setRenewEndDate] = useState<Date | null>(null);
+  const [renewLoading, setRenewLoading] = useState(false);
 
   // アラートレベル判定
   const statusFlow = task.statusFlow;
@@ -249,11 +255,29 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
     });
   };
 
-  // ワンクリック更新
+  // 更新ダイアログを開く（自動計算でプリフィル）
+  const handleOpenRenewDialog = async () => {
+    setRenewLoading(true);
+    setShowRenewDialog(true);
+    const result = await getNextDates(task.id);
+    if (result.success) {
+      setRenewStartDate(result.startDate ? new Date(result.startDate) : null);
+      setRenewEndDate(result.endDate ? new Date(result.endDate) : null);
+    }
+    setRenewLoading(false);
+  };
+
+  // 更新を実行（ダイアログの日付で）
   const handleRenew = () => {
+    if (!renewStartDate || !renewEndDate) return;
     startTransition(async () => {
-      const result = await renewTask(task.id);
+      const result = await renewTask(
+        task.id,
+        formatToISO(renewStartDate),
+        formatToISO(renewEndDate)
+      );
       if (result.success) {
+        setShowRenewDialog(false);
         router.refresh();
       } else {
         alert(result.error);
@@ -477,18 +501,76 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
             </Button>
           )}
 
-          {/* ワンクリック更新ボタン（完了時） */}
-          {isCompleted && task.calculationPattern !== "MANUAL" && (
+          {/* 次回更新ボタン（完了時） */}
+          {isCompleted && (
             <Button
               size="sm"
               variant="outline"
-              onClick={handleRenew}
+              onClick={handleOpenRenewDialog}
               disabled={isPending}
               className="gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              {isPending ? "更新中..." : "前回と同じルールで更新する"}
+              次の期間を登録する
             </Button>
+          )}
+        </div>
+      )}
+
+      {/* 更新ダイアログ */}
+      {showRenewDialog && (
+        <div className="border-t pt-3 mt-2 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">次の期間を入力</h4>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setShowRenewDialog(false)}
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+          {renewLoading ? (
+            <p className="text-xs text-muted-foreground">計算中...</p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                書類に記載されている期間を入力してください。自動計算値がプリセットされています。
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    開始日
+                  </label>
+                  <DateInput value={renewStartDate} onChange={setRenewStartDate} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    終了日
+                  </label>
+                  <DateInput value={renewEndDate} onChange={setRenewEndDate} />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowRenewDialog(false)}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleRenew}
+                  disabled={isPending || !renewStartDate || !renewEndDate}
+                  className="gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {isPending ? "登録中..." : "この期間で登録する"}
+                </Button>
+              </div>
+            </>
           )}
         </div>
       )}

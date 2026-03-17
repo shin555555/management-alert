@@ -350,10 +350,61 @@ export async function updateTaskDates(
 }
 
 // ========================================
-// ワンクリック更新（次回期限の自動計算）
+// 次回期限のプレビュー計算（ダイアログ用）
+// ========================================
+export async function getNextDates(
+  taskId: string
+): Promise<{
+  success: boolean;
+  startDate?: string;
+  endDate?: string;
+  error?: string;
+}> {
+  try {
+    const task = await prisma.clientTask.findUnique({
+      where: { id: taskId },
+      include: { template: true },
+    });
+
+    if (!task) {
+      return { success: false, error: "タスクが見つかりません" };
+    }
+
+    const pattern = task.template.calculationPattern as CalculationPattern;
+    const rules = task.template.calculationRules as CalculationRules;
+
+    // 次回の開始日は現在の終了日の翌日
+    const nextStartDate = new Date(task.endDate);
+    nextStartDate.setDate(nextStartDate.getDate() + 1);
+
+    if (pattern === "MANUAL") {
+      // 手動タスクは開始日だけ提案（終了日は空）
+      return {
+        success: true,
+        startDate: nextStartDate.toISOString(),
+      };
+    }
+
+    const nextEndDate = calculateEndDate(pattern, rules, nextStartDate);
+
+    return {
+      success: true,
+      startDate: nextStartDate.toISOString(),
+      endDate: nextEndDate ? nextEndDate.toISOString() : undefined,
+    };
+  } catch (error) {
+    console.error("次回日付計算エラー:", error);
+    return { success: false, error: "次回期限の計算に失敗しました" };
+  }
+}
+
+// ========================================
+// 次回更新（確認ダイアログ経由・手入力対応）
 // ========================================
 export async function renewTask(
-  taskId: string
+  taskId: string,
+  startDateISO: string,
+  endDateISO: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getSession();
@@ -367,21 +418,15 @@ export async function renewTask(
       return { success: false, error: "タスクが見つかりません" };
     }
 
-    const pattern = task.template.calculationPattern as CalculationPattern;
-    const rules = task.template.calculationRules as CalculationRules;
+    const nextStartDate = new Date(startDateISO);
+    const nextEndDate = new Date(endDateISO);
 
-    if (pattern === "MANUAL") {
-      return { success: false, error: "手動タスクは自動更新できません" };
+    if (isNaN(nextStartDate.getTime()) || isNaN(nextEndDate.getTime())) {
+      return { success: false, error: "日付の形式が正しくありません" };
     }
 
-    // 次回の開始日は現在の終了日の翌日
-    const nextStartDate = new Date(task.endDate);
-    nextStartDate.setDate(nextStartDate.getDate() + 1);
-
-    const nextEndDate = calculateEndDate(pattern, rules, nextStartDate);
-
-    if (!nextEndDate) {
-      return { success: false, error: "次回期限の計算に失敗しました" };
+    if (nextStartDate >= nextEndDate) {
+      return { success: false, error: "開始日は終了日より前にしてください" };
     }
 
     const statusFlow = task.template.statusFlow as string[];
@@ -404,7 +449,7 @@ export async function renewTask(
           newStatus: `${statusFlow[statusFlow.length - 1]}→次回更新`,
         },
       }),
-      // 新しいタスクを生成
+      // 新しいタスクを生成（ユーザー入力の日付を使用）
       prisma.clientTask.create({
         data: {
           clientId: task.clientId,

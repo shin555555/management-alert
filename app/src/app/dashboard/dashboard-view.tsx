@@ -28,7 +28,7 @@ import {
   type DashboardData,
   type DashboardTask,
 } from "./actions";
-import { updateTaskStatus, renewTask } from "../clients/actions";
+import { updateTaskStatus } from "../clients/actions";
 import { formatToWareki } from "@/lib/wareki";
 
 // ========================================
@@ -207,17 +207,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
     });
   };
 
-  // ワンクリック更新
-  const handleRenew = () => {
-    startTransition(async () => {
-      const result = await renewTask(task.id);
-      if (result.success) {
-        router.refresh();
-      } else {
-        alert(result.error);
-      }
-    });
-  };
+  // ※ 更新は利用者詳細画面のダイアログから行う
 
   // 行の左ボーダー色
   const alertConfig = task.alertLevel
@@ -333,19 +323,13 @@ function TaskRow({ task }: { task: DashboardTask }) {
               {isPending ? "..." : nextStatus}
             </span>
           </Button>
-        ) : isCompleted && task.calculationPattern !== "MANUAL" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleRenew}
-            disabled={isPending}
-            className="gap-1 text-xs"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">
-              {isPending ? "..." : "次回更新"}
-            </span>
-          </Button>
+        ) : isCompleted ? (
+          <Link href={`/clients/${task.clientId}`}>
+            <Button size="sm" variant="outline" className="gap-1 text-xs">
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">次の期間を登録</span>
+            </Button>
+          </Link>
         ) : (
           <Link href={`/clients/${task.clientId}`}>
             <Button variant="ghost" size="sm" className="gap-1 text-xs">
