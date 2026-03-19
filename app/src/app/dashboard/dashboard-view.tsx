@@ -7,7 +7,7 @@
  * 折りたたみ状態でもサマリーバッジでステータスが一目でわかる。
  */
 
-import React, { useState, useTransition } from "react";
+import React, { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -31,6 +31,7 @@ import {
 } from "./actions";
 import { updateTaskStatus } from "../clients/actions";
 import { formatToWareki } from "@/lib/wareki";
+import { toast } from "sonner";
 
 // ========================================
 // 型定義
@@ -109,10 +110,9 @@ function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
       return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
     });
 
-    // 和暦の月ラベルを生成
+    // 和暦の月ラベルを生成（wareki.ts を利用）
     const [year, month] = key.split("-").map(Number);
-    const reiwaYear = year - 2018;
-    const label = `令和${reiwaYear}年${month}月`;
+    const label = formatToWareki(new Date(year, month - 1, 1)).replace(/1日$/, "");
 
     // グループサマリー集計
     const summary = {
@@ -128,12 +128,13 @@ function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
       const statusFlow = t.statusFlow;
       const firstStatus = statusFlow[0];
       const isWaiting = t.currentStatus === firstStatus;
-      const isOverdue = new Date(t.endDate) < now && !t.alertLevel;
+      const isOverdue = new Date(t.endDate) < now;
 
-      if (t.alertLevel === "red") summary.red++;
+      // 超過を最優先で判定し、その後アラートレベルで分類
+      if (isOverdue) summary.overdue++;
+      else if (t.alertLevel === "red") summary.red++;
       else if (t.alertLevel === "orange") summary.orange++;
       else if (t.alertLevel === "yellow") summary.yellow++;
-      else if (isOverdue) summary.overdue++;
       else if (isWaiting) summary.waiting++;
       else summary.inProgress++;
     }
@@ -148,7 +149,7 @@ function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
 
 export function DashboardView({ data }: DashboardViewProps) {
   const { summary, tasks } = data;
-  const monthGroups = groupTasksByMonth(tasks);
+  const monthGroups = useMemo(() => groupTasksByMonth(tasks), [tasks]);
 
   // 直近2ヶ月はデフォルト展開、それ以降は折りたたみ
   const defaultOpen = new Set(monthGroups.slice(0, 2).map((g) => g.key));
@@ -406,7 +407,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
       if (result.success) {
         router.refresh();
       } else {
-        alert(result.error);
+        toast.error(result.error || "ステータスの更新に失敗しました");
       }
     });
   };

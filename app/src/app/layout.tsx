@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { auth } from "@/auth";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -47,6 +48,7 @@ export default async function RootLayout({
           // 未ログイン: ログインページ等をそのまま表示
           <>{children}</>
         )}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
