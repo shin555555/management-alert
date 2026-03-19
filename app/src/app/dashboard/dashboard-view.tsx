@@ -3,8 +3,8 @@
 /**
  * ダッシュボード画面のクライアントコンポーネント
  *
- * アラート対象・進行中タスクをリスト表示し、ダッシュボードから直接
- * ステータス進行やワンクリック更新を実行できる。
+ * タスクを期限月ごとにグループ化し、折りたたみ可能なセクションで表示する。
+ * 折りたたみ状態でもサマリーバッジでステータスが一目でわかる。
  */
 
 import React, { useState, useTransition } from "react";
@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Clock,
   LayoutDashboard,
@@ -38,6 +39,20 @@ import { formatToWareki } from "@/lib/wareki";
 interface DashboardViewProps {
   data: DashboardData;
 }
+
+type MonthGroup = {
+  key: string; // "2026-04" 形式
+  label: string; // "令和8年4月" 形式
+  tasks: DashboardTask[];
+  summary: {
+    red: number;
+    orange: number;
+    yellow: number;
+    overdue: number;
+    waiting: number;
+    inProgress: number;
+  };
+};
 
 // アラートレベルの表示設定
 const ALERT_CONFIG = {
@@ -65,20 +80,91 @@ const ALERT_CONFIG = {
 };
 
 // ========================================
+// ヘルパー: タスクを期限月でグループ化
+// ========================================
+
+function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
+  const now = new Date();
+  const groups = new Map<string, DashboardTask[]>();
+
+  // タスクを月ごとに振り分け
+  for (const task of tasks) {
+    const d = new Date(task.endDate);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(task);
+  }
+
+  // キーでソート（時系列順）
+  const sortedKeys = [...groups.keys()].sort();
+
+  return sortedKeys.map((key) => {
+    const monthTasks = groups.get(key)!;
+    // 月内タスクをアラートレベル→期限日でソート
+    monthTasks.sort((a, b) => {
+      const priority = { red: 0, orange: 1, yellow: 2 } as Record<string, number>;
+      const aP = a.alertLevel ? priority[a.alertLevel] ?? 3 : 3;
+      const bP = b.alertLevel ? priority[b.alertLevel] ?? 3 : 3;
+      if (aP !== bP) return aP - bP;
+      return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+    });
+
+    // 和暦の月ラベルを生成
+    const [year, month] = key.split("-").map(Number);
+    const reiwaYear = year - 2018;
+    const label = `令和${reiwaYear}年${month}月`;
+
+    // グループサマリー集計
+    const summary = {
+      red: 0,
+      orange: 0,
+      yellow: 0,
+      overdue: 0,
+      waiting: 0,
+      inProgress: 0,
+    };
+
+    for (const t of monthTasks) {
+      const statusFlow = t.statusFlow;
+      const firstStatus = statusFlow[0];
+      const isWaiting = t.currentStatus === firstStatus;
+      const isOverdue = new Date(t.endDate) < now && !t.alertLevel;
+
+      if (t.alertLevel === "red") summary.red++;
+      else if (t.alertLevel === "orange") summary.orange++;
+      else if (t.alertLevel === "yellow") summary.yellow++;
+      else if (isOverdue) summary.overdue++;
+      else if (isWaiting) summary.waiting++;
+      else summary.inProgress++;
+    }
+
+    return { key, label, tasks: monthTasks, summary };
+  });
+}
+
+// ========================================
 // メインコンポーネント
 // ========================================
 
 export function DashboardView({ data }: DashboardViewProps) {
   const { summary, tasks } = data;
+  const monthGroups = groupTasksByMonth(tasks);
 
-  // タスクをアラートレベル順にソート（赤→橙→黄→期限超過→進行中）
-  const sortedTasks = [...tasks].sort((a, b) => {
-    const priority = { red: 0, orange: 1, yellow: 2 } as Record<string, number>;
-    const aP = a.alertLevel ? priority[a.alertLevel] ?? 3 : 3;
-    const bP = b.alertLevel ? priority[b.alertLevel] ?? 3 : 3;
-    if (aP !== bP) return aP - bP;
-    return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
-  });
+  // 直近2ヶ月はデフォルト展開、それ以降は折りたたみ
+  const defaultOpen = new Set(monthGroups.slice(0, 2).map((g) => g.key));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(defaultOpen);
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const expandAll = () => setOpenGroups(new Set(monthGroups.map((g) => g.key)));
+  const collapseAll = () => setOpenGroups(new Set());
 
   return (
     <div className="space-y-6">
@@ -111,31 +197,149 @@ export function DashboardView({ data }: DashboardViewProps) {
         />
       </div>
 
-      {/* タスク一覧 */}
+      {/* タスク一覧（月グループ化） */}
       <div className="rounded-xl border bg-card">
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h2 className="text-lg font-semibold">対応待ちタスク</h2>
-          <Badge variant="secondary" className="text-xs">
-            {sortedTasks.length}件
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={expandAll}
+            >
+              すべて展開
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={collapseAll}
+            >
+              すべて折りたたみ
+            </Button>
+            <Badge variant="secondary" className="text-xs">
+              {tasks.length}件
+            </Badge>
+          </div>
         </div>
 
-        {sortedTasks.length > 0 ? (
+        {monthGroups.length > 0 ? (
           <div className="divide-y">
-            {sortedTasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
+            {monthGroups.map((group) => (
+              <MonthSection
+                key={group.key}
+                group={group}
+                isOpen={openGroups.has(group.key)}
+                onToggle={() => toggleGroup(group.key)}
+              />
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <LayoutDashboard className="w-12 h-12 mb-4 opacity-20" />
-            <p className="text-sm">現在、対応が必要なタスクはありません 🎉</p>
+            <p className="text-sm">現在、対応が必要なタスクはありません</p>
             <p className="text-xs mt-1">
               利用者を登録すると、ここにタスクが表示されます
             </p>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ========================================
+// 月セクション（折りたたみ可能）
+// ========================================
+
+function MonthSection({
+  group,
+  isOpen,
+  onToggle,
+}: {
+  group: MonthGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const { summary } = group;
+
+  // ヘッダーの左ボーダー色（最も緊急度の高いレベルで決定）
+  const headerBorder = summary.red > 0 || summary.overdue > 0
+    ? "border-l-red-500"
+    : summary.orange > 0
+      ? "border-l-orange-400"
+      : summary.yellow > 0
+        ? "border-l-yellow-400"
+        : "border-l-gray-200";
+
+  return (
+    <div>
+      {/* グループヘッダー */}
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center gap-3 px-5 py-3 border-l-4 hover:bg-muted/40 transition-colors cursor-pointer ${headerBorder}`}
+      >
+        {/* 折りたたみアイコン */}
+        {isOpen ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        )}
+
+        {/* 月ラベル */}
+        <span className="text-sm font-semibold whitespace-nowrap">
+          {group.label}
+        </span>
+
+        {/* 件数 */}
+        <Badge variant="outline" className="text-[10px]">
+          {group.tasks.length}件
+        </Badge>
+
+        {/* サマリーバッジ群 */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {summary.overdue > 0 && (
+            <Badge variant="destructive" className="text-[10px]">
+              超過 {summary.overdue}
+            </Badge>
+          )}
+          {summary.red > 0 && (
+            <Badge className="text-[10px] bg-red-500 text-white">
+              緊急 {summary.red}
+            </Badge>
+          )}
+          {summary.orange > 0 && (
+            <Badge className="text-[10px] bg-orange-400 text-white">
+              警告 {summary.orange}
+            </Badge>
+          )}
+          {summary.yellow > 0 && (
+            <Badge className="text-[10px] bg-yellow-400 text-black">
+              準備 {summary.yellow}
+            </Badge>
+          )}
+          {summary.inProgress > 0 && (
+            <Badge variant="secondary" className="text-[10px]">
+              進行中 {summary.inProgress}
+            </Badge>
+          )}
+          {summary.waiting > 0 && (
+            <Badge variant="outline" className="text-[10px]">
+              未対応 {summary.waiting}
+            </Badge>
+          )}
+        </div>
+      </button>
+
+      {/* タスク行（展開時のみ表示） */}
+      {isOpen && (
+        <div className="divide-y bg-muted/10">
+          {group.tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -207,8 +411,6 @@ function TaskRow({ task }: { task: DashboardTask }) {
     });
   };
 
-  // ※ 更新は利用者詳細画面のダイアログから行う
-
   // 行の左ボーダー色
   const alertConfig = task.alertLevel
     ? ALERT_CONFIG[task.alertLevel]
@@ -230,7 +432,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
 
   return (
     <div
-      className={`flex items-center gap-4 px-5 py-3.5 border-l-4 hover:bg-muted/30 transition-colors ${borderColor}`}
+      className={`flex items-center gap-4 px-5 py-3.5 pl-10 border-l-4 hover:bg-muted/30 transition-colors ${borderColor}`}
     >
       {/* アラートバッジ */}
       <div className="w-14 shrink-0">
