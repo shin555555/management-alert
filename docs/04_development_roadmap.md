@@ -101,6 +101,19 @@ AIエージェントは、このロードマップに沿って段階的に実装
   - グループヘッダーの左ボーダー色は最も緊急度の高いアラートレベルで決定
   - 「すべて展開」「すべて折りたたみ」ボタンを追加
 
+### 8-2. コードレビュー指摘対応（要実装）
+
+> **⚠️ 次回セッションで必ず対応すること。詳細は `docs/開発進捗.md` の「保留中タスク」セクションを参照。**
+
+- [ ] **[C-1] overdue/red の分類不整合を修正**（`dashboard-view.tsx` の `groupTasksByMonth` 内 summary 集計ロジック）
+  - `isOverdue` 判定から `&& !t.alertLevel` を削除し、超過を最優先カウントに変更
+- [ ] **[C-2] useState の初期値を tasks 変更時に再同期**（`dashboard-view.tsx` の `DashboardView` コンポーネント）
+  - `useMemo` + `useEffect` を使って `openGroups` を `monthGroups` と連動させる
+- [ ] **[I-1] 和暦ラベル生成を直接計算に変更**（`.replace(/1日$/, "")` を廃止、`year - 2018` で直接生成）
+- [ ] **[I-2] `isOverdue` の日付比較に `startOfDay` を使って正規化**（`date-fns` 使用）
+- [ ] **[I-3] `<button>` に `type="button"` を追加**（MonthSection の折りたたみボタン・全展開・全折りたたみボタン）
+- [ ] **[I-4] 折りたたみボタンに `aria-expanded={isOpen}` を追加**（アクセシビリティ対応）
+
 ## インフラ作業
 - [x] `DATABASE_URL` を実際の接続文字列に更新 (`.env`) — ローカルPostgreSQL 17 (winget)
 - [x] `npx prisma migrate dev --name add-password-to-user` を実行（passwordカラム追加）
