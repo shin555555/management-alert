@@ -605,11 +605,10 @@ export async function getMissingTemplates(
     });
     const existingTemplateIds = existingTasks.map((t) => t.templateId);
 
-    // 事業所のデフォルトテンプレートのうち、まだ登録されていないもの
+    // 事業所の全テンプレートのうち、まだ登録されていないもの
     const templates = await prisma.taskTemplate.findMany({
       where: {
         facilityId,
-        isDefault: true,
         id: { notIn: existingTemplateIds },
       },
       orderBy: { sortOrder: "asc" },
