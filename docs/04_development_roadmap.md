@@ -107,10 +107,10 @@ AIエージェントは、このロードマップに沿って段階的に実装
 
 - [x] **[C-1] overdue/red の分類不整合を修正**（前回セッションで修正済み）
 - [x] **[C-2] useState の初期値を tasks 変更時に再同期**（`useEffect` で `monthGroups` 変更時に `openGroups` をリセット）
-- [ ] **[I-1] 和暦ラベル生成を直接計算に変更**（`.replace(/1日$/, "")` を廃止、`year - 2018` で直接生成）
-- [ ] **[I-2] `isOverdue` の日付比較に `startOfDay` を使って正規化**（`date-fns` 使用）
-- [ ] **[I-3] `<button>` に `type="button"` を追加**（MonthSection の折りたたみボタン・全展開・全折りたたみボタン）
-- [ ] **[I-4] 折りたたみボタンに `aria-expanded={isOpen}` を追加**（アクセシビリティ対応）
+- [x] **[I-1] 和暦ラベル生成を直接計算に変更**（`.replace(/1日$/, "")` を廃止、`year - 2018` で直接生成）
+- [x] **[I-2] `isOverdue` の日付比較に `startOfDay` を使って正規化**（`date-fns` 使用）
+- [x] **[I-3] `<button>` に `type="button"` を追加**（MonthSection の折りたたみボタン・全展開・全折りたたみボタン）
+- [x] **[I-4] 折りたたみボタンに `aria-expanded={isOpen}` を追加**（アクセシビリティ対応）
 
 ## フェーズ9: 利用者一覧ドラッグ&ドロップ並び替え (Phase 9)
 

@@ -7,7 +7,7 @@
  * 折りたたみ状態でもサマリーバッジでステータスが一目でわかる。
  */
 
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -30,6 +30,7 @@ import {
   type DashboardTask,
 } from "./actions";
 import { updateTaskStatus } from "../clients/actions";
+import { startOfDay } from "date-fns";
 import { formatToWareki } from "@/lib/wareki";
 import { toast } from "sonner";
 
@@ -110,9 +111,10 @@ function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
       return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
     });
 
-    // 和暦の月ラベルを生成（wareki.ts を利用）
+    // 和暦の月ラベルを生成（formatToWareki の出力形式に依存しない直接計算）
     const [year, month] = key.split("-").map(Number);
-    const label = formatToWareki(new Date(year, month - 1, 1)).replace(/1日$/, "");
+    const reiwaYear = year - 2018;
+    const label = `令和${reiwaYear}年${month}月`;
 
     // グループサマリー集計
     const summary = {
@@ -128,7 +130,7 @@ function groupTasksByMonth(tasks: DashboardTask[]): MonthGroup[] {
       const statusFlow = t.statusFlow;
       const firstStatus = statusFlow[0];
       const isWaiting = t.currentStatus === firstStatus;
-      const isOverdue = new Date(t.endDate) < now;
+      const isOverdue = startOfDay(new Date(t.endDate)) < startOfDay(now);
 
       // 超過を最優先で判定し、その後アラートレベルで分類
       if (isOverdue) summary.overdue++;
@@ -170,8 +172,11 @@ export function DashboardView({ data }: DashboardViewProps) {
     });
   };
 
-  const expandAll = () => setOpenGroups(new Set(monthGroups.map((g) => g.key)));
-  const collapseAll = () => setOpenGroups(new Set());
+  const expandAll = useCallback(
+    () => setOpenGroups(new Set(monthGroups.map((g) => g.key))),
+    [monthGroups]
+  );
+  const collapseAll = useCallback(() => setOpenGroups(new Set()), []);
 
   return (
     <div className="space-y-6">
@@ -210,6 +215,7 @@ export function DashboardView({ data }: DashboardViewProps) {
           <h2 className="text-lg font-semibold">対応待ちタスク</h2>
           <div className="flex items-center gap-2">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground"
@@ -218,6 +224,7 @@ export function DashboardView({ data }: DashboardViewProps) {
               すべて展開
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground"
@@ -260,15 +267,13 @@ export function DashboardView({ data }: DashboardViewProps) {
 // 月セクション（折りたたみ可能）
 // ========================================
 
-function MonthSection({
-  group,
-  isOpen,
-  onToggle,
-}: {
+interface MonthSectionProps {
   group: MonthGroup;
   isOpen: boolean;
   onToggle: () => void;
-}) {
+}
+
+function MonthSection({ group, isOpen, onToggle }: MonthSectionProps) {
   const { summary } = group;
 
   // ヘッダーの左ボーダー色（最も緊急度の高いレベルで決定）
@@ -284,6 +289,8 @@ function MonthSection({
     <div>
       {/* グループヘッダー */}
       <button
+        type="button"
+        aria-expanded={isOpen}
         onClick={onToggle}
         className={`w-full flex items-center gap-3 px-5 py-3 border-l-4 hover:bg-muted/40 transition-colors cursor-pointer ${headerBorder}`}
       >
@@ -393,7 +400,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
   const [isPending, startTransition] = useTransition();
 
   const now = new Date();
-  const isOverdue = new Date(task.endDate) < now;
+  const isOverdue = startOfDay(new Date(task.endDate)) < startOfDay(now);
   const statusFlow = task.statusFlow;
   const lastStatus = statusFlow[statusFlow.length - 1];
   const isCompleted = task.currentStatus === lastStatus;
