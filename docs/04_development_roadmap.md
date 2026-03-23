@@ -114,6 +114,21 @@ AIエージェントは、このロードマップに沿って段階的に実装
 - [ ] **[I-3] `<button>` に `type="button"` を追加**（MonthSection の折りたたみボタン・全展開・全折りたたみボタン）
 - [ ] **[I-4] 折りたたみボタンに `aria-expanded={isOpen}` を追加**（アクセシビリティ対応）
 
+## フェーズ9: 利用者一覧ドラッグ&ドロップ並び替え (Phase 9)
+
+> **背景**: 利用者一覧の表示順をスタッフが自由に変えたいというニーズに対応。
+
+### 9-1. ドラッグ&ドロップ並び替え
+
+- [x] **`Client` モデルに `sortOrder` フィールドを追加**（マイグレーション実施）
+- [x] **`@dnd-kit` ライブラリを導入**（core / sortable / utilities）
+- [x] **`updateClientOrder` Server Action を追加**（並び順をDBに永続化）
+- [x] **利用者一覧テーブルにDnD UIを実装**
+  - 左端にドラッグハンドル（⠿アイコン）を追加
+  - ドラッグ中は行が半透明になるフィードバック
+  - 検索中はDnDを無効化（フィルター後の並び替えは無意味のため）
+  - ドロップ後に自動でDBへ保存
+
 ## インフラ作業
 - [x] `DATABASE_URL` を実際の接続文字列に更新 (`.env`) — ローカルPostgreSQL 17 (winget)
 - [x] `npx prisma migrate dev --name add-password-to-user` を実行（passwordカラム追加）

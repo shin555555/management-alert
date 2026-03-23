@@ -74,6 +74,7 @@ model Client {
   admissionDate DateTime @map("admission_date") @db.Date // 利用開始日
   isActive      Boolean  @default(true) @map("is_active") // 在籍フラグ (退所対応)
   archivedAt    DateTime? @map("archived_at") // 退所日時
+  sortOrder     Int      @default(0) @map("sort_order") // 表示順（ドラッグ&ドロップ用）
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

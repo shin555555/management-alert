@@ -87,7 +87,7 @@ export async function getActiveClients(): Promise<ClientListItem[]> {
     const facilityId = session.user.facilityId;
     const clients = await prisma.client.findMany({
       where: { isActive: true, facilityId },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         clientTasks: {
           include: { template: true },
@@ -671,5 +671,29 @@ export async function archiveClient(
   } catch (error) {
     console.error("退所処理エラー:", error);
     return { success: false, error: "退所処理に失敗しました" };
+  }
+}
+
+// ========================================
+// 利用者の並び順を更新（ドラッグ&ドロップ用）
+// ========================================
+export async function updateClientOrder(
+  orderedIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, index) =>
+        prisma.client.update({
+          where: { id },
+          data: { sortOrder: index },
+        })
+      )
+    );
+
+    revalidatePath("/clients");
+    return { success: true };
+  } catch (error) {
+    console.error("並び順更新エラー:", error);
+    return { success: false, error: "並び順の更新に失敗しました" };
   }
 }

@@ -35,6 +35,7 @@ erDiagram
         string name "利用者名"
         date admission_date "利用開始日"
         boolean is_active "在籍フラグ(退所対応)"
+        int sort_order "表示順(DnD用)"
     }
     
     TASK_TEMPLATE {
