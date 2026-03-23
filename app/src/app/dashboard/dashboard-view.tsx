@@ -7,7 +7,7 @@
  * 折りたたみ状態でもサマリーバッジでステータスが一目でわかる。
  */
 
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -152,8 +152,14 @@ export function DashboardView({ data }: DashboardViewProps) {
   const monthGroups = useMemo(() => groupTasksByMonth(tasks), [tasks]);
 
   // 直近2ヶ月はデフォルト展開、それ以降は折りたたみ
-  const defaultOpen = new Set(monthGroups.slice(0, 2).map((g) => g.key));
-  const [openGroups, setOpenGroups] = useState<Set<string>>(defaultOpen);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    new Set(monthGroups.slice(0, 2).map((g) => g.key))
+  );
+
+  // tasks が変わったら openGroups をリセット（router.refresh() 後に対応）
+  useEffect(() => {
+    setOpenGroups(new Set(monthGroups.slice(0, 2).map((g) => g.key)));
+  }, [monthGroups]);
 
   const toggleGroup = (key: string) => {
     setOpenGroups((prev) => {
