@@ -35,6 +35,7 @@ export interface ClientListItem {
   admissionDate: Date;
   isActive: boolean;
   archivedAt: Date | null;
+  notes: string | null;
   taskSummary: {
     total: number;
     overdue: number;
@@ -49,6 +50,7 @@ export interface ClientDetail {
   admissionDate: Date;
   isActive: boolean;
   archivedAt: Date | null;
+  notes: string | null;
   createdAt: Date;
   updatedAt: Date;
   tasks: ClientTaskItem[];
@@ -117,6 +119,7 @@ export async function getActiveClients(): Promise<ClientListItem[]> {
         admissionDate: client.admissionDate,
         isActive: client.isActive,
         archivedAt: client.archivedAt,
+        notes: client.notes,
         taskSummary: {
           total: tasks.length,
           overdue: statusFlow.filter((s) => s.isOverdue).length,
@@ -156,6 +159,7 @@ export async function getClientDetail(
       admissionDate: client.admissionDate,
       isActive: client.isActive,
       archivedAt: client.archivedAt,
+      notes: client.notes,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
       tasks: client.clientTasks.map((ct) => ({
@@ -676,6 +680,32 @@ export async function archiveClient(
 
 // ========================================
 // 利用者の並び順を更新（ドラッグ&ドロップ用）
+// ========================================
+// ========================================
+// 利用者メモ更新
+// ========================================
+export async function updateClientNotes(
+  clientId: string,
+  notes: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getSession();
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { notes: notes.trim() || null },
+    });
+
+    revalidatePath(`/clients/${clientId}`);
+    revalidatePath("/clients");
+    return { success: true };
+  } catch (error) {
+    console.error("メモ更新エラー:", error);
+    return { success: false, error: "メモの更新に失敗しました" };
+  }
+}
+
+// ========================================
+// 利用者並び順更新
 // ========================================
 export async function updateClientOrder(
   orderedIds: string[]

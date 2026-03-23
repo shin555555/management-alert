@@ -18,6 +18,7 @@ import {
   Archive,
   Pencil,
   Save,
+  StickyNote,
   Trash2,
   X,
 } from "lucide-react";
@@ -35,6 +36,7 @@ import {
   archiveClient,
   addTaskToClient,
   deleteTask,
+  updateClientNotes,
 } from "../actions";
 import { determineAlertLevel, type AlertStep } from "@/lib/date-calculation";
 import { formatToWareki, formatToISO } from "@/lib/wareki";
@@ -83,6 +85,8 @@ export function ClientDetailView({ client, missingTemplates }: ClientDetailViewP
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveConfirm, setArchiveConfirm] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState(client.notes ?? "");
 
   // タスクをカテゴリ別にグループ化
   const groupedTasks = client.tasks.reduce<Record<string, ClientTaskItem[]>>(
@@ -162,6 +166,76 @@ export function ClientDetailView({ client, missingTemplates }: ClientDetailViewP
               </Button>
             )}
           </div>
+        )}
+      </div>
+
+      {/* メモセクション */}
+      <div className="rounded-xl border bg-card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <StickyNote className="w-4 h-4" />
+            メモ
+          </div>
+          {!isEditingNotes && client.isActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                setNotesText(client.notes ?? "");
+                setIsEditingNotes(true);
+              }}
+            >
+              <Pencil className="w-3 h-3 mr-1" />
+              編集
+            </Button>
+          )}
+        </div>
+        {isEditingNotes ? (
+          <div className="space-y-2">
+            <textarea
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={3}
+              placeholder="メモを入力..."
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                onClick={() => setIsEditingNotes(false)}
+              >
+                <X className="w-3 h-3 mr-1" />
+                キャンセル
+              </Button>
+              <Button
+                size="sm"
+                className="h-7"
+                disabled={isPending}
+                onClick={() => {
+                  startTransition(async () => {
+                    const result = await updateClientNotes(client.id, notesText);
+                    if (result.success) {
+                      setIsEditingNotes(false);
+                      router.refresh();
+                    } else {
+                      alert(result.error);
+                    }
+                  });
+                }}
+              >
+                <Save className="w-3 h-3 mr-1" />
+                保存
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm whitespace-pre-wrap">
+            {client.notes || <span className="text-muted-foreground italic">メモなし</span>}
+          </p>
         )}
       </div>
 

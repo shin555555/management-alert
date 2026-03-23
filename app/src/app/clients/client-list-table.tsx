@@ -92,7 +92,14 @@ function SortableClientRow({ client }: { client: ClientListItem }) {
         className="px-4 py-3 cursor-pointer"
         onClick={() => router.push(`/clients/${client.id}`)}
       >
-        <span className="font-medium">{client.name}</span>
+        <div>
+          <span className="font-medium">{client.name}</span>
+          {client.notes && (
+            <p className="text-xs text-muted-foreground truncate max-w-[200px] mt-0.5">
+              {client.notes}
+            </p>
+          )}
+        </div>
       </td>
       <td
         className="px-4 py-3 hidden md:table-cell cursor-pointer"
