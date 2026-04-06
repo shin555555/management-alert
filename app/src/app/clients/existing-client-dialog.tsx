@@ -97,7 +97,7 @@ export function ExistingClientDialog({
       setAdmissionDate(null);
       setErrorMsg(null);
 
-      // 各テンプレートのタスク状態を初期化
+      // 各テンプレートのタスク状態を初期化（デフォルトはスキップ＝後で追加）
       const initial: Record<string, TaskState> = {};
       templates.forEach((tpl) => {
         initial[tpl.id] = {
@@ -105,7 +105,7 @@ export function ExistingClientDialog({
           startDate: null,
           endDate: null,
           currentStatus: tpl.statusFlow[0] ?? "未対応",
-          skip: false,
+          skip: true,
         };
       });
       setTaskStates(initial);
@@ -203,7 +203,7 @@ export function ExistingClientDialog({
           <DialogDescription>
             {step === 1
               ? "すでに在籍している利用者の基本情報を入力してください。"
-              : "各管理項目の現在の期の日程とステータスを入力してください。"}
+              : "登録したい管理項目の「次回から管理」のチェックを外して、日程とステータスを入力してください。すべてスキップしても登録できます。"}
           </DialogDescription>
         </DialogHeader>
 
@@ -232,9 +232,9 @@ export function ExistingClientDialog({
             <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3">
               <p className="font-medium mb-1">既存在籍者登録モードについて</p>
               <p>
-                次のステップで、各管理項目（支給決定期間・個別支援計画など）の
-                <strong>現在の期の実際の開始日・終了日・進捗状況</strong>
-                を入力します。自動計算は行いません。
+                次のステップで管理項目が表示されます。
+                分かっている項目だけ入力してください。
+                <strong>すべてスキップして後から追加することも可能</strong>です。
               </p>
             </div>
 

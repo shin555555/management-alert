@@ -8,11 +8,12 @@
  */
 
 import React, { useState, useEffect, useTransition, useCallback } from "react";
-import { CalendarDays, Sparkles, Info } from "lucide-react";
+import { CalendarDays, Sparkles, Info, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +104,7 @@ export function NewClientDialog({
   const [taskOverrides, setTaskOverrides] = useState<
     Record<string, { startDate: Date | null; endDate: Date | null }>
   >({});
+  const [skippedTasks, setSkippedTasks] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -115,6 +117,7 @@ export function NewClientDialog({
       setSelectedMonth("");
       setGeneratedTasks([]);
       setTaskOverrides({});
+      setSkippedTasks(new Set());
       setErrorMsg(null);
     }
   }, [open]);
@@ -152,6 +155,7 @@ export function NewClientDialog({
 
       setGeneratedTasks(tasks);
       setTaskOverrides({});
+      setSkippedTasks(new Set());
     },
     [templates]
   );
@@ -190,17 +194,19 @@ export function NewClientDialog({
     const formData: NewClientFormData = {
       name: name.trim(),
       admissionDate: formatToISO(admissionDate),
-      tasks: generatedTasks.map((task) => {
-        const override = taskOverrides[task.templateId];
-        const startDate = override?.startDate || task.startDate;
-        const endDate = override?.endDate !== undefined ? override.endDate : task.endDate;
+      tasks: generatedTasks
+        .filter((task) => !skippedTasks.has(task.templateId))
+        .map((task) => {
+          const override = taskOverrides[task.templateId];
+          const startDate = override?.startDate || task.startDate;
+          const endDate = override?.endDate !== undefined ? override.endDate : task.endDate;
 
-        return {
-          templateId: task.templateId,
-          startDate: formatToISO(startDate),
-          endDate: endDate ? formatToISO(endDate) : null,
-        };
-      }),
+          return {
+            templateId: task.templateId,
+            startDate: formatToISO(startDate),
+            endDate: endDate ? formatToISO(endDate) : null,
+          };
+        }),
     };
 
     startTransition(async () => {
@@ -276,15 +282,16 @@ export function NewClientDialog({
                   期限の自動計算結果
                 </span>
                 <Badge variant="secondary" className="text-[10px]">
-                  {generatedTasks.length}項目
+                  {generatedTasks.length - skippedTasks.size}項目登録
+                  {skippedTasks.size > 0 && ` / ${skippedTasks.size}スキップ`}
                 </Badge>
               </div>
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs">
                 <Info className="w-4 h-4 shrink-0 mt-0.5" />
                 <p>
-                  受給者証等と照合し、異なる場合は各項目の日付を直接修正してください。
-                  和暦入力（例: R90228）や↑↓キーでの微調整が可能です。
+                  すべての項目は任意です。不要な項目は「後で登録」にチェックを入れてスキップできます。
+                  スキップした項目は利用者詳細ページから後で追加できます。
                 </p>
               </div>
 
@@ -295,6 +302,7 @@ export function NewClientDialog({
                   </p>
 
                   {tasks.map((task) => {
+                    const isSkipped = skippedTasks.has(task.templateId);
                     const override = taskOverrides[task.templateId];
                     const displayStart = override?.startDate || task.startDate;
                     const displayEnd =
@@ -305,45 +313,65 @@ export function NewClientDialog({
                     return (
                       <div
                         key={task.templateId}
-                        className="rounded-lg border bg-card p-3 space-y-2"
+                        className={`rounded-lg border p-3 space-y-2 transition-colors ${
+                          isSkipped ? "bg-muted/40 opacity-60" : "bg-card"
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
                             {task.templateName}
                           </span>
-                          <Badge variant="outline" className="text-[10px]">
-                            {task.calculationPattern === "MANUAL"
-                              ? "手動入力"
-                              : "自動計算"}
-                          </Badge>
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground select-none">
+                            <Checkbox
+                              checked={isSkipped}
+                              onCheckedChange={(checked) => {
+                                setSkippedTasks((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(task.templateId);
+                                  else next.delete(task.templateId);
+                                  return next;
+                                });
+                              }}
+                            />
+                            <SkipForward className="w-3 h-3" />
+                            後で登録
+                          </label>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <DateInput
-                            label="開始日"
-                            value={displayStart}
-                            onChange={(date) =>
-                              handleTaskDateOverride(
-                                task.templateId,
-                                "startDate",
-                                date
-                              )
-                            }
-                            id={`start-${task.templateId}`}
-                          />
-                          <DateInput
-                            label="終了日（期限）"
-                            value={displayEnd}
-                            onChange={(date) =>
-                              handleTaskDateOverride(
-                                task.templateId,
-                                "endDate",
-                                date
-                              )
-                            }
-                            id={`end-${task.templateId}`}
-                          />
-                        </div>
+                        {!isSkipped && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <DateInput
+                              label="開始日"
+                              value={displayStart}
+                              onChange={(date) =>
+                                handleTaskDateOverride(
+                                  task.templateId,
+                                  "startDate",
+                                  date
+                                )
+                              }
+                              id={`start-${task.templateId}`}
+                            />
+                            <DateInput
+                              label="終了日（期限）"
+                              value={displayEnd}
+                              onChange={(date) =>
+                                handleTaskDateOverride(
+                                  task.templateId,
+                                  "endDate",
+                                  date
+                                )
+                              }
+                              id={`end-${task.templateId}`}
+                            />
+                          </div>
+                        )}
+
+                        {isSkipped && (
+                          <p className="text-xs text-muted-foreground">
+                            利用者詳細ページから後で追加できます。
+                          </p>
+                        )}
                       </div>
                     );
                   })}
