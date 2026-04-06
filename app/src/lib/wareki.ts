@@ -62,6 +62,17 @@ export function parseWarekiInput(input: string): WarekiParseResult {
     return { success: false, date: null, formatted: null, error: "入力が空です" };
   }
 
+  // 西暦日本語表記パース: 「2015年10月1日」
+  const seirekiJaMatch = cleaned.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日?$/);
+  if (seirekiJaMatch) {
+    const year = parseInt(seirekiJaMatch[1], 10);
+    const month = parseInt(seirekiJaMatch[2], 10);
+    const day = parseInt(seirekiJaMatch[3], 10);
+    if (year >= 1926 && year <= 2100) {
+      return buildResult(year, month, day);
+    }
+  }
+
   // 日本語表記パース: 「令和5年2月1日」「平成30年4月1日」「昭和63年1月1日」
   const jaWarekiMatch = cleaned.match(/^(令和|平成|昭和)(\d{1,2})年(\d{1,2})月(\d{1,2})日?$/);
   if (jaWarekiMatch) {
@@ -119,7 +130,7 @@ export function parseWarekiInput(input: string): WarekiParseResult {
     success: false,
     date: null,
     formatted: null,
-    error: "認識できない形式です。「令和5年2月1日」「R50201」「H300401」「S630101」「20230201」等の形式で入力してください。",
+    error: "認識できない形式です。「2015年10月1日」「令和5年2月1日」「R50201」「H300401」「S630101」「20230201」等の形式で入力してください。",
   };
 }
 

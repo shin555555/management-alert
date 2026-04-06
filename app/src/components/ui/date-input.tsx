@@ -213,7 +213,7 @@ export function DateInput({
         {/* フォーカス中のヒント */}
         {isFocused && (
           <div className="absolute -bottom-5 left-0 text-[11px] text-muted-foreground">
-            令和/平成/昭和○年○月○日 / R・H・S＋数字 ／ ↑↓: ±1日
+            2015年10月1日 / 令和/平成/昭和○年○月○日 / R・H・S＋数字 ／ ↑↓: ±1日
           </div>
         )}
       </div>
