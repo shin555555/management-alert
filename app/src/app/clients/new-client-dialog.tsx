@@ -22,13 +22,6 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import {
   calculateEndDate,
@@ -66,29 +59,6 @@ interface GeneratedTask {
 }
 
 // ========================================
-// 利用開始月の選択肢を生成
-// ========================================
-function generateMonthOptions(): { value: string; label: string }[] {
-  const options: { value: string; label: string }[] = [];
-  const now = new Date();
-
-  // 過去3ヶ月から未来12ヶ月
-  for (let i = -3; i <= 12; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const reiwaYear = year - 2018;
-
-    options.push({
-      value: `${year}-${String(month).padStart(2, "0")}`,
-      label: `令和${reiwaYear}年${month}月 (${year}/${String(month).padStart(2, "0")})`,
-    });
-  }
-
-  return options;
-}
-
-// ========================================
 // コンポーネント
 // ========================================
 
@@ -99,7 +69,7 @@ export function NewClientDialog({
   onSuccess,
 }: NewClientDialogProps) {
   const [name, setName] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [admissionDate, setAdmissionDate] = useState<Date | null>(null);
   const [generatedTasks, setGeneratedTasks] = useState<GeneratedTask[]>([]);
   const [taskOverrides, setTaskOverrides] = useState<
     Record<string, { startDate: Date | null; endDate: Date | null }>
@@ -108,13 +78,11 @@ export function NewClientDialog({
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const monthOptions = generateMonthOptions();
-
   // ダイアログ表示時に初期化
   useEffect(() => {
     if (open) {
       setName("");
-      setSelectedMonth("");
+      setAdmissionDate(null);
       setGeneratedTasks([]);
       setTaskOverrides({});
       setSkippedTasks(new Set());
@@ -122,32 +90,31 @@ export function NewClientDialog({
     }
   }, [open]);
 
-  // 利用開始月が変更されたらタスクを自動計算
-  const handleMonthChange = useCallback(
-    (month: string) => {
-      setSelectedMonth(month);
+  // 利用開始日が変更されたらタスクを自動計算
+  const handleAdmissionDateChange = useCallback(
+    (date: Date | null) => {
+      setAdmissionDate(date);
 
-      if (!month) {
+      if (!date) {
         setGeneratedTasks([]);
         return;
       }
 
-      // 月の1日を開始日とする
-      const [year, mon] = month.split("-").map(Number);
-      const admissionDate = new Date(year, mon - 1, 1);
+      // 入力された月の1日を起点にタスクを自動計算
+      const baseDate = new Date(date.getFullYear(), date.getMonth(), 1);
 
       const tasks: GeneratedTask[] = templates.map((tpl) => {
         const endDate = calculateEndDate(
           tpl.calculationPattern as CalculationPattern,
           tpl.calculationRules as CalculationRules,
-          admissionDate
+          baseDate
         );
 
         return {
           templateId: tpl.id,
           templateName: tpl.name,
           category: tpl.category,
-          startDate: admissionDate,
+          startDate: baseDate,
           endDate,
           calculationPattern: tpl.calculationPattern,
         };
@@ -181,19 +148,16 @@ export function NewClientDialog({
       setErrorMsg("利用者名を入力してください");
       return;
     }
-    if (!selectedMonth) {
-      setErrorMsg("利用開始月を選択してください");
+    if (!admissionDate) {
+      setErrorMsg("利用開始日を入力してください");
       return;
     }
 
     setErrorMsg(null);
 
-    const [year, mon] = selectedMonth.split("-").map(Number);
-    const admissionDate = new Date(year, mon - 1, 1);
-
     const formData: NewClientFormData = {
       name: name.trim(),
-      admissionDate: formatToISO(admissionDate),
+      admissionDate: formatToISO(admissionDate!),
       tasks: generatedTasks
         .filter((task) => !skippedTasks.has(task.templateId))
         .map((task) => {
@@ -239,7 +203,7 @@ export function NewClientDialog({
             新規利用者登録
           </DialogTitle>
           <DialogDescription>
-            利用開始月を選択すると、各種期限が自動計算されます。
+            利用開始日を入力すると、各種期限が自動計算されます。
           </DialogDescription>
         </DialogHeader>
 
@@ -256,22 +220,14 @@ export function NewClientDialog({
             />
           </div>
 
-          {/* 利用開始月 */}
-          <div className="space-y-1.5">
-            <Label>利用開始月 *</Label>
-            <Select value={selectedMonth} onValueChange={handleMonthChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="利用開始月を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* 利用開始日 */}
+          <DateInput
+            id="admission-date"
+            label="利用開始日 *"
+            value={admissionDate}
+            onChange={handleAdmissionDateChange}
+            placeholder="R90228 / H271001 / S631010"
+          />
 
           {/* スマート予測入力結果 */}
           {generatedTasks.length > 0 && (
@@ -392,7 +348,7 @@ export function NewClientDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isPending || !name.trim() || !selectedMonth}
+            disabled={isPending || !name.trim() || !admissionDate}
           >
             {isPending ? "登録中..." : "登録する"}
           </Button>
