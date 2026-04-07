@@ -41,8 +41,28 @@ model Facility {
   users         User[]
   clients       Client[]
   taskTemplates TaskTemplate[]
+  branches      Branch[]
 
   @@map("facilities")
+}
+
+// ========================================
+// 事業所内の拠点（法人内の複数事業所）(Branch)
+// 法人内に複数の事業所がある場合に、利用者を所属で分類するためのマスタ。
+// UI上は「事業所」と表記する。
+// ========================================
+model Branch {
+  id         String   @id @default(cuid())
+  facilityId String   @map("facility_id")
+  name       String   // 事業所名 (例: A事業所)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+  clients  Client[]
+
+  @@map("branches")
 }
 
 // ========================================
@@ -70,6 +90,7 @@ model User {
 model Client {
   id            String   @id @default(cuid())
   facilityId    String   @map("facility_id")
+  branchId      String?  @map("branch_id") // 所属事業所（法人内の拠点単位、任意）
   name          String   // 利用者名
   admissionDate DateTime @map("admission_date") @db.Date // 利用開始日
   isActive      Boolean  @default(true) @map("is_active") // 在籍フラグ (退所対応)
@@ -80,6 +101,7 @@ model Client {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   facility    Facility     @relation(fields: [facilityId], references: [id])
+  branch      Branch?      @relation(fields: [branchId], references: [id])
   clientTasks ClientTask[]
 
   @@map("clients")

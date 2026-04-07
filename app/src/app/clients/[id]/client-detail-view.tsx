@@ -11,6 +11,7 @@ import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Building2,
   Calendar,
   CheckCircle2,
   ChevronRight,
@@ -27,6 +28,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DateInput } from "@/components/ui/date-input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   type ClientDetail,
   type ClientTaskItem,
   updateTaskStatus,
@@ -37,7 +45,9 @@ import {
   addTaskToClient,
   deleteTask,
   updateClientNotes,
+  updateClientBranch,
 } from "../actions";
+import { type BranchData } from "../../settings/actions";
 import { determineAlertLevel, type AlertStep } from "@/lib/date-calculation";
 import { formatToWareki, formatToISO } from "@/lib/wareki";
 
@@ -56,6 +66,7 @@ interface MissingTemplate {
 interface ClientDetailViewProps {
   client: ClientDetail;
   missingTemplates: MissingTemplate[];
+  branches: BranchData[];
 }
 
 // アラートレベルの色
@@ -81,7 +92,7 @@ const ALERT_LABELS: Record<string, string> = {
 // メインコンポーネント
 // ========================================
 
-export function ClientDetailView({ client, missingTemplates }: ClientDetailViewProps) {
+export function ClientDetailView({ client, missingTemplates, branches }: ClientDetailViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveConfirm, setArchiveConfirm] = useState(false);
@@ -128,6 +139,35 @@ export function ClientDetailView({ client, missingTemplates }: ClientDetailViewP
               <Calendar className="w-3.5 h-3.5" />
               利用開始日: {formatToWareki(new Date(client.admissionDate))}
             </p>
+            {branches.length > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                <Select
+                  value={client.branchId ?? "__none__"}
+                  disabled={!client.isActive || isPending}
+                  onValueChange={(v) => {
+                    const next = v === "__none__" ? null : v;
+                    startTransition(async () => {
+                      const result = await updateClientBranch(client.id, next);
+                      if (result.success) router.refresh();
+                      else alert(result.error);
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-7 text-xs w-48">
+                    <SelectValue placeholder="未所属" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">未所属</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </div>
 

@@ -40,6 +40,7 @@ import {
   type ExistingClientFormData,
   type ExistingClientTaskInput,
 } from "./actions";
+import { type BranchData } from "../settings/actions";
 
 // ========================================
 // 型定義
@@ -56,6 +57,7 @@ interface ExistingClientDialogProps {
     calculationRules: Record<string, unknown>;
     statusFlow: string[];
   }>;
+  branches: BranchData[];
   onSuccess: () => void;
 }
 
@@ -75,6 +77,7 @@ export function ExistingClientDialog({
   open,
   onOpenChange,
   templates,
+  branches,
   onSuccess,
 }: ExistingClientDialogProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -82,6 +85,7 @@ export function ExistingClientDialog({
   // ステップ1: 基本情報
   const [name, setName] = useState("");
   const [admissionDate, setAdmissionDate] = useState<Date | null>(null);
+  const [branchId, setBranchId] = useState<string>("");
 
   // ステップ2: タスク情報
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({});
@@ -95,6 +99,7 @@ export function ExistingClientDialog({
       setStep(1);
       setName("");
       setAdmissionDate(null);
+      setBranchId("");
       setErrorMsg(null);
 
       // 各テンプレートのタスク状態を初期化（デフォルトはスキップ＝後で追加）
@@ -156,6 +161,7 @@ export function ExistingClientDialog({
     const formData: ExistingClientFormData = {
       name: name.trim(),
       admissionDate: formatToISO(admissionDate!),
+      branchId: branchId || null,
       tasks: Object.values(taskStates).map((t): ExistingClientTaskInput => ({
         templateId: t.templateId,
         startDate: t.startDate ? formatToISO(t.startDate) : formatToISO(admissionDate!),
@@ -228,6 +234,30 @@ export function ExistingClientDialog({
               onChange={setAdmissionDate}
               placeholder="R90228 / 2027-02-28"
             />
+
+            {branches.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>所属事業所</Label>
+                <Select
+                  value={branchId || "__none__"}
+                  onValueChange={(v) =>
+                    setBranchId(v === "__none__" ? "" : v)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="未所属" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">未所属</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3">
               <p className="font-medium mb-1">既存在籍者登録モードについて</p>

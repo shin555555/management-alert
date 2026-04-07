@@ -1,6 +1,7 @@
 import { Users } from "lucide-react";
 import { ClientListPage } from "./client-list-page";
 import { getActiveClients, getTemplatesForNewClient } from "./actions";
+import { getBranches } from "../settings/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,10 @@ export const metadata = {
 };
 
 export default async function ClientsPage() {
-  const [clients, templates] = await Promise.all([
+  const [clients, templates, branches] = await Promise.all([
     getActiveClients(),
     getTemplatesForNewClient(),
+    getBranches(),
   ]);
 
   return (
@@ -28,7 +30,11 @@ export default async function ClientsPage() {
         </div>
       </div>
 
-      <ClientListPage initialClients={clients} templates={templates} />
+      <ClientListPage
+        initialClients={clients}
+        templates={templates}
+        branches={branches}
+      />
     </div>
   );
 }

@@ -38,8 +38,19 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { type ClientListItem, updateClientOrder } from "./actions";
+import { type BranchData } from "../settings/actions";
 import { formatToWareki } from "@/lib/wareki";
+
+const FILTER_ALL = "__all__";
+const FILTER_NONE = "__none__";
 
 // ========================================
 // 型定義
@@ -47,6 +58,7 @@ import { formatToWareki } from "@/lib/wareki";
 
 interface ClientListTableProps {
   clients: ClientListItem[];
+  branches: BranchData[];
 }
 
 // ========================================
@@ -93,7 +105,14 @@ function SortableClientRow({ client }: { client: ClientListItem }) {
         onClick={() => router.push(`/clients/${client.id}`)}
       >
         <div>
-          <span className="font-medium">{client.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{client.name}</span>
+            {client.branchName && (
+              <Badge variant="outline" className="text-[10px]">
+                {client.branchName}
+              </Badge>
+            )}
+          </div>
           {client.notes && (
             <p className="text-xs text-muted-foreground truncate max-w-[200px] mt-0.5">
               {client.notes}
@@ -156,9 +175,10 @@ function SortableClientRow({ client }: { client: ClientListItem }) {
 // メインコンポーネント
 // ========================================
 
-export function ClientListTable({ clients }: ClientListTableProps) {
+export function ClientListTable({ clients, branches }: ClientListTableProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [branchFilter, setBranchFilter] = useState<string>(FILTER_ALL);
   const [items, setItems] = useState(clients);
   const [isPending, startTransition] = useTransition();
 
@@ -167,14 +187,23 @@ export function ClientListTable({ clients }: ClientListTableProps) {
     setItems(clients);
   }, [clients]);
 
-  // 検索中はDnD無効化（フィルター後の並び替えは意味がないため）
-  const isSearching = searchQuery.length > 0;
+  // 検索 or 絞り込み中はDnD無効化（並び替えは意味がないため）
+  const isFiltering = searchQuery.length > 0 || branchFilter !== FILTER_ALL;
 
-  const filteredClients = isSearching
-    ? items.filter((client) =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : items;
+  const filteredClients = items.filter((client) => {
+    if (
+      searchQuery &&
+      !client.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    if (branchFilter === FILTER_NONE) {
+      if (client.branchId) return false;
+    } else if (branchFilter !== FILTER_ALL) {
+      if (client.branchId !== branchFilter) return false;
+    }
+    return true;
+  });
 
   // DnDセンサー設定（ドラッグ開始までの距離を設定してクリックと区別）
   const sensors = useSensors(
@@ -207,15 +236,33 @@ export function ClientListTable({ clients }: ClientListTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* 検索バー */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="利用者名で検索..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* 検索バー & 事業所絞り込み */}
+      <div className="flex flex-col gap-2 md:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="利用者名で検索..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {branches.length > 0 && (
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="md:w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={FILTER_ALL}>すべての事業所</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+              <SelectItem value={FILTER_NONE}>未所属のみ</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* サマリーカード */}
@@ -277,7 +324,7 @@ export function ClientListTable({ clients }: ClientListTableProps) {
               <SortableContext
                 items={filteredClients.map((c) => c.id)}
                 strategy={verticalListSortingStrategy}
-                disabled={isSearching}
+                disabled={isFiltering}
               >
                 <tbody>
                   {filteredClients.map((client) => (

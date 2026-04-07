@@ -36,6 +36,8 @@ export interface ClientListItem {
   isActive: boolean;
   archivedAt: Date | null;
   notes: string | null;
+  branchId: string | null;
+  branchName: string | null;
   taskSummary: {
     total: number;
     overdue: number;
@@ -51,6 +53,8 @@ export interface ClientDetail {
   isActive: boolean;
   archivedAt: Date | null;
   notes: string | null;
+  branchId: string | null;
+  branchName: string | null;
   createdAt: Date;
   updatedAt: Date;
   tasks: ClientTaskItem[];
@@ -73,6 +77,7 @@ export interface ClientTaskItem {
 export interface NewClientFormData {
   name: string;
   admissionDate: string; // ISO形式 "YYYY-MM-DD"
+  branchId?: string | null;
   tasks: Array<{
     templateId: string;
     startDate: string;
@@ -91,6 +96,7 @@ export async function getActiveClients(): Promise<ClientListItem[]> {
       where: { isActive: true, facilityId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
+        branch: true,
         clientTasks: {
           include: { template: true },
         },
@@ -120,6 +126,8 @@ export async function getActiveClients(): Promise<ClientListItem[]> {
         isActive: client.isActive,
         archivedAt: client.archivedAt,
         notes: client.notes,
+        branchId: client.branchId,
+        branchName: client.branch?.name ?? null,
         taskSummary: {
           total: tasks.length,
           overdue: statusFlow.filter((s) => s.isOverdue).length,
@@ -144,6 +152,7 @@ export async function getClientDetail(
     const client = await prisma.client.findUnique({
       where: { id: clientId },
       include: {
+        branch: true,
         clientTasks: {
           include: { template: true },
           orderBy: { template: { sortOrder: "asc" } },
@@ -160,6 +169,8 @@ export async function getClientDetail(
       isActive: client.isActive,
       archivedAt: client.archivedAt,
       notes: client.notes,
+      branchId: client.branchId,
+      branchName: client.branch?.name ?? null,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
       tasks: client.clientTasks.map((ct) => ({
@@ -234,6 +245,7 @@ export async function createClient(
     const client = await prisma.client.create({
       data: {
         facilityId,
+        branchId: data.branchId || null,
         name: data.name,
         admissionDate,
         isActive: true,
@@ -490,6 +502,7 @@ export interface ExistingClientFormData {
   name: string;
   admissionDate: string; // ISO形式
   memo?: string;
+  branchId?: string | null;
   tasks: ExistingClientTaskInput[];
 }
 
@@ -507,6 +520,7 @@ export async function registerExistingClient(
     const client = await prisma.client.create({
       data: {
         facilityId,
+        branchId: data.branchId || null,
         name: data.name,
         admissionDate,
         isActive: true,
@@ -543,6 +557,27 @@ export async function registerExistingClient(
   } catch (error) {
     console.error("既存在籍者登録エラー:", error);
     return { success: false, error: "利用者の登録に失敗しました" };
+  }
+}
+
+// ========================================
+// 利用者の所属事業所を更新
+// ========================================
+export async function updateClientBranch(
+  clientId: string,
+  branchId: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { branchId: branchId || null },
+    });
+    revalidatePath("/clients");
+    revalidatePath(`/clients/${clientId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("所属事業所更新エラー:", error);
+    return { success: false, error: "所属事業所の更新に失敗しました" };
   }
 }
 

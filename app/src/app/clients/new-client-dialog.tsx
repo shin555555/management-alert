@@ -24,6 +24,14 @@ import {
 } from "@/components/ui/dialog";
 import { DateInput } from "@/components/ui/date-input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { type BranchData } from "../settings/actions";
+import {
   calculateEndDate,
   type CalculationPattern,
   type CalculationRules,
@@ -46,6 +54,7 @@ interface NewClientDialogProps {
     calculationRules: Record<string, unknown>;
     statusFlow: string[];
   }>;
+  branches: BranchData[];
   onSuccess: () => void;
 }
 
@@ -66,10 +75,12 @@ export function NewClientDialog({
   open,
   onOpenChange,
   templates,
+  branches,
   onSuccess,
 }: NewClientDialogProps) {
   const [name, setName] = useState("");
   const [admissionDate, setAdmissionDate] = useState<Date | null>(null);
+  const [branchId, setBranchId] = useState<string>("");
   const [generatedTasks, setGeneratedTasks] = useState<GeneratedTask[]>([]);
   const [taskOverrides, setTaskOverrides] = useState<
     Record<string, { startDate: Date | null; endDate: Date | null }>
@@ -83,6 +94,7 @@ export function NewClientDialog({
     if (open) {
       setName("");
       setAdmissionDate(null);
+      setBranchId("");
       setGeneratedTasks([]);
       setTaskOverrides({});
       setSkippedTasks(new Set());
@@ -158,6 +170,7 @@ export function NewClientDialog({
     const formData: NewClientFormData = {
       name: name.trim(),
       admissionDate: formatToISO(admissionDate!),
+      branchId: branchId || null,
       tasks: generatedTasks
         .filter((task) => !skippedTasks.has(task.templateId))
         .map((task) => {
@@ -228,6 +241,29 @@ export function NewClientDialog({
             onChange={handleAdmissionDateChange}
             placeholder="R90228 / H271001 / S631010"
           />
+
+          {/* 所属事業所 */}
+          {branches.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>所属事業所</Label>
+              <Select
+                value={branchId || "__none__"}
+                onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="未所属" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">未所属</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* スマート予測入力結果 */}
           {generatedTasks.length > 0 && (

@@ -14,6 +14,7 @@ import { ClientListTable } from "./client-list-table";
 import { NewClientDialog } from "./new-client-dialog";
 import { ExistingClientDialog } from "./existing-client-dialog";
 import { type ClientListItem } from "./actions";
+import { type BranchData } from "../settings/actions";
 
 interface ClientListPageProps {
   initialClients: ClientListItem[];
@@ -25,11 +26,13 @@ interface ClientListPageProps {
     calculationRules: Record<string, unknown>;
     statusFlow: string[];
   }>;
+  branches: BranchData[];
 }
 
 export function ClientListPage({
   initialClients,
   templates,
+  branches,
 }: ClientListPageProps) {
   const router = useRouter();
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
@@ -59,13 +62,14 @@ export function ClientListPage({
       </div>
 
       {/* 一覧テーブル */}
-      <ClientListTable clients={initialClients} />
+      <ClientListTable clients={initialClients} branches={branches} />
 
       {/* 新規登録ダイアログ */}
       <NewClientDialog
         open={isNewDialogOpen}
         onOpenChange={setIsNewDialogOpen}
         templates={templates}
+        branches={branches}
         onSuccess={handleSuccess}
       />
 
@@ -74,6 +78,7 @@ export function ClientListPage({
         open={isExistingDialogOpen}
         onOpenChange={setIsExistingDialogOpen}
         templates={templates}
+        branches={branches}
         onSuccess={handleSuccess}
       />
     </>

@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 import { TemplateList } from "./template-list";
-import { getTaskTemplates } from "./actions";
+import { BranchList } from "./branch-list";
+import { getTaskTemplates, getBranches } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,10 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const templates = await getTaskTemplates();
+  const [templates, branches] = await Promise.all([
+    getTaskTemplates(),
+    getBranches(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -20,9 +24,13 @@ export default async function SettingsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">マスタ設定</h1>
           <p className="text-sm text-muted-foreground">
-            期限ルール・タスクテンプレート・アラート段階の管理
+            期限ルール・タスクテンプレート・事業所マスタの管理
           </p>
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6">
+        <BranchList initialBranches={branches} />
       </div>
 
       <div className="rounded-xl border bg-card p-6">
