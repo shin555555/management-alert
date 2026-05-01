@@ -184,3 +184,9 @@ AIエージェントは、このロードマップに沿って段階的に実装
 - [x] `npx prisma migrate dev --name add-password-to-user` を実行（passwordカラム追加）
 - [x] `npx prisma db seed` を実行（初期ユーザー・テンプレートデータ投入）
 - [x] Prisma v7 対応: `@prisma/adapter-pg` + `driverAdapters` プレビュー機能を導入
+
+## フェーズ13: ダッシュボード項目探索性の改善 (2026-05-01)
+- [x] 月別表示を維持したまま、項目フィルタを追加
+- [x] 月タブ展開後の並び順切替（優先度順/項目名順/利用者名順）を追加
+- [x] ワンクリックで月別既定表示へ戻すリセット操作を追加
+
