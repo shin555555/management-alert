@@ -71,15 +71,15 @@ interface ClientDetailViewProps {
 
 // アラートレベルの色
 const ALERT_STYLES: Record<string, string> = {
-  red: "border-red-400 bg-red-50",
-  orange: "border-orange-300 bg-orange-50",
-  yellow: "border-yellow-300 bg-yellow-50",
+  red: "bg-gradient-to-r from-red-50 to-red-100/80 shadow-md shadow-red-500/10",
+  orange: "bg-orange-50/50 shadow-sm",
+  yellow: "bg-card shadow-sm",
 };
 
 const ALERT_BADGE_STYLES: Record<string, string> = {
   red: "bg-red-500 text-white",
-  orange: "bg-orange-400 text-white",
-  yellow: "bg-yellow-400 text-black",
+  orange: "bg-orange-400/80 text-white",
+  yellow: "bg-yellow-400/70 text-yellow-900",
 };
 
 const ALERT_LABELS: Record<string, string> = {
@@ -132,7 +132,7 @@ export function ClientDetailView({ client, missingTemplates, branches }: ClientD
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-extrabold tracking-tight">
               {client.name}
             </h1>
             <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -210,7 +210,7 @@ export function ClientDetailView({ client, missingTemplates, branches }: ClientD
       </div>
 
       {/* メモセクション */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl bg-card shadow-sm p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <StickyNote className="w-4 h-4" />
@@ -293,7 +293,7 @@ export function ClientDetailView({ client, missingTemplates, branches }: ClientD
       ))}
 
       {client.tasks.length === 0 && (
-        <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground">
+        <div className="rounded-xl bg-card shadow-sm p-6 text-center text-muted-foreground">
           <p className="text-sm">タスクがまだ登録されていません</p>
         </div>
       )}
@@ -421,15 +421,15 @@ function TaskCard({ task }: { task: ClientTaskItem }) {
   const cardStyle = alertLevel
     ? ALERT_STYLES[alertLevel]
     : isCompleted
-      ? "border-green-200 bg-green-50/50"
-      : "border-border bg-card";
+      ? "bg-green-50/30 shadow-sm"
+      : "bg-card shadow-sm";
 
   return (
-    <div className={`rounded-xl border-2 p-4 space-y-3 transition-colors ${cardStyle}`}>
+    <div className={`rounded-xl p-4 space-y-3 transition-all duration-200 ${cardStyle}`}>
       {/* タスクヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium">{task.templateName}</h3>
+          <h3 className="font-semibold text-base tracking-tight">{task.templateName}</h3>
           {alertLevel && (
             <Badge className={`text-[10px] ${ALERT_BADGE_STYLES[alertLevel]}`}>
               {ALERT_LABELS[alertLevel]}
@@ -729,7 +729,7 @@ function AddTaskCard({
   };
 
   return (
-    <div className="rounded-xl border-2 border-dashed border-muted p-4 space-y-3">
+    <div className="rounded-xl border border-dashed border-muted-foreground/20 bg-card/50 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-medium text-muted-foreground">{template.name}</h3>

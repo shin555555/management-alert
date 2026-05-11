@@ -124,7 +124,7 @@ export function BranchList({ initialBranches }: BranchListProps) {
           まだ事業所が登録されていません
         </p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="divide-y divide-border/50 rounded-lg bg-muted/20">
           {initialBranches.map((branch) => (
             <li
               key={branch.id}

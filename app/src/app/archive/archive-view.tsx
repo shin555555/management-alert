@@ -76,7 +76,7 @@ export function ArchiveView({ clients }: ArchiveViewProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border bg-card p-6">
+        <div className="rounded-xl bg-card shadow-sm p-6">
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Archive className="w-12 h-12 mb-4 opacity-20" />
             {searchQuery ? (
@@ -129,10 +129,10 @@ function ArchivedClientRow({ client }: { client: ArchivedClient }) {
   };
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden">
+    <div className="rounded-xl bg-card shadow-sm overflow-hidden">
       {/* ヘッダー行 */}
       <button
-        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/20 transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/10 transition-all duration-200"
         onClick={handleToggle}
       >
         {isExpanded ? (
@@ -142,7 +142,7 @@ function ArchivedClientRow({ client }: { client: ArchivedClient }) {
         )}
 
         <div className="flex-1 min-w-0">
-          <span className="font-medium">{client.name}</span>
+          <span className="font-semibold text-base tracking-tight">{client.name}</span>
           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -164,7 +164,7 @@ function ArchivedClientRow({ client }: { client: ArchivedClient }) {
 
       {/* 展開部分 */}
       {isExpanded && (
-        <div className="border-t px-5 py-4 space-y-4 bg-muted/5">
+        <div className="border-t border-border/50 px-5 py-4 space-y-4 bg-muted/5">
           {isLoading ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               読み込み中...
@@ -177,7 +177,7 @@ function ArchivedClientRow({ client }: { client: ArchivedClient }) {
                   {detail.tasks.map((task) => (
                     <div
                       key={task.id}
-                      className="rounded-lg border p-3 space-y-2 bg-card"
+                      className="rounded-lg bg-muted/20 p-3 space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">

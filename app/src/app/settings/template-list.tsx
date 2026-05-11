@@ -167,7 +167,7 @@ export function TemplateList({ initialTemplates }: TemplateListProps) {
             return (
               <div
                 key={tpl.id}
-                className="rounded-xl border bg-card transition-all duration-200 hover:shadow-md"
+                className="rounded-xl bg-card shadow-sm transition-all duration-200 hover:shadow-md"
               >
                 {/* メイン行 */}
                 <div
@@ -185,7 +185,7 @@ export function TemplateList({ initialTemplates }: TemplateListProps) {
                   {/* テンプレート名 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium truncate">{tpl.name}</h3>
+                      <h3 className="font-semibold text-base tracking-tight truncate">{tpl.name}</h3>
                       {tpl.isDefault && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           デフォルト
@@ -273,7 +273,7 @@ export function TemplateList({ initialTemplates }: TemplateListProps) {
 
                 {/* 展開詳細 */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t pt-3 space-y-3">
+                  <div className="px-4 pb-4 border-t border-border/50 pt-3 space-y-3">
                     {/* 計算ルール */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">

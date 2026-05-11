@@ -13,15 +13,15 @@ export default async function ArchivePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-          <Archive className="w-5 h-5 text-primary" />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10">
+          <Archive className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-3xl font-extrabold tracking-tight">
             退所者アーカイブ
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-0.5">
             退所した利用者の過去データの閲覧（監査対策）
           </p>
         </div>

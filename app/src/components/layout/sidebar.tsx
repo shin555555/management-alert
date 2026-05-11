@@ -94,10 +94,10 @@ export function Sidebar({ role, userName }: SidebarProps) {
             <Link
                 href={item.href}
                 className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
                     isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm"
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground font-medium"
                 )}
             >
                 <item.icon className="w-5 h-5 shrink-0" />
@@ -125,11 +125,11 @@ export function Sidebar({ role, userName }: SidebarProps) {
     return (
         <>
             {/* モバイルヘッダー */}
-            <div className="md:hidden flex items-center gap-3 px-4 h-14 border-b bg-sidebar fixed top-0 left-0 right-0 z-50">
+            <div className="md:hidden flex items-center gap-3 px-4 h-14 bg-sidebar shadow-lg fixed top-0 left-0 right-0 z-50">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-9 w-9 text-sidebar-foreground hover:bg-sidebar-accent"
                     onClick={() => setMobileOpen(!mobileOpen)}
                 >
                     {mobileOpen ? (
@@ -139,10 +139,10 @@ export function Sidebar({ role, userName }: SidebarProps) {
                     )}
                 </Button>
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary text-primary-foreground">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                         <ShieldCheck className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-bold">期限管理システム</span>
+                    <span className="text-sm font-bold text-sidebar-foreground">期限管理システム</span>
                 </div>
             </div>
 
@@ -157,7 +157,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
             {/* サイドバー本体 */}
             <aside
                 className={cn(
-                    "flex flex-col h-screen border-r border-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out z-50",
+                    "flex flex-col h-screen bg-sidebar text-sidebar-foreground shadow-[1px_0_3px_rgba(0,0,0,0.04)] transition-all duration-300 ease-in-out z-50",
                     // デスクトップ
                     "hidden md:flex",
                     collapsed ? "w-[68px]" : "w-[260px]",
@@ -168,28 +168,28 @@ export function Sidebar({ role, userName }: SidebarProps) {
             >
                 {/* ロゴ / アプリ名（デスクトップのみ） */}
                 <div className="hidden md:flex items-center gap-3 px-4 h-16 shrink-0">
-                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-primary-foreground shrink-0">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shrink-0">
                         <ShieldCheck className="w-5 h-5" />
                     </div>
                     {!collapsed && (
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-sm font-bold tracking-tight truncate">
+                            <span className="text-sm font-bold tracking-tight truncate text-white">
                                 期限管理システム
                             </span>
-                            <span className="text-[10px] text-muted-foreground truncate">
+                            <span className="text-[10px] text-sidebar-foreground/60 truncate">
                                 A型事業所向け
                             </span>
                         </div>
                     )}
                 </div>
 
-                <Separator className="hidden md:block" />
+                <div className="hidden md:block h-px bg-sidebar-border" />
 
                 {/* ナビゲーション */}
                 <nav className="flex-1 flex flex-col gap-1 px-2 py-3 overflow-y-auto">
                     <span
                         className={cn(
-                            "text-[10px] font-semibold uppercase text-muted-foreground px-2 mb-1 tracking-widest",
+                            "text-[10px] font-semibold uppercase text-sidebar-foreground/40 px-2 mb-1 tracking-widest",
                             collapsed && "md:sr-only"
                         )}
                     >
@@ -203,10 +203,10 @@ export function Sidebar({ role, userName }: SidebarProps) {
                     {/* 管理者メニュー（ADMINのみ表示） */}
                     {isAdmin && (
                         <>
-                            <Separator className="my-2" />
+                            <div className="my-2 h-px bg-sidebar-border" />
                             <span
                                 className={cn(
-                                    "text-[10px] font-semibold uppercase text-muted-foreground px-2 mb-1 tracking-widest",
+                                    "text-[10px] font-semibold uppercase text-sidebar-foreground/40 px-2 mb-1 tracking-widest",
                                     collapsed && "md:sr-only"
                                 )}
                             >
@@ -220,15 +220,15 @@ export function Sidebar({ role, userName }: SidebarProps) {
                 </nav>
 
                 {/* ユーザー情報 + ログアウト */}
-                <Separator />
+                <div className="h-px bg-sidebar-border" />
                 <div className="p-2 space-y-1">
                     {/* ユーザー情報 */}
                     {(!collapsed || mobileOpen) && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent/40">
-                            <UserCircle className="w-5 h-5 shrink-0 text-muted-foreground" />
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent/60">
+                            <UserCircle className="w-5 h-5 shrink-0 text-sidebar-foreground/60" />
                             <div className="flex flex-col overflow-hidden min-w-0">
-                                <span className="text-xs font-medium truncate">{userName}</span>
-                                <span className="text-[10px] text-muted-foreground">
+                                <span className="text-xs font-medium truncate text-sidebar-accent-foreground">{userName}</span>
+                                <span className="text-[10px] text-sidebar-foreground/50">
                                     {isAdmin ? "管理者" : "スタッフ"}
                                 </span>
                             </div>
@@ -244,7 +244,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
                                     variant="ghost"
                                     size="sm"
                                     className={cn(
-                                        "w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                                        "w-full text-sidebar-foreground/60 hover:text-red-400 hover:bg-red-500/10",
                                         collapsed && !mobileOpen ? "justify-center px-0" : "justify-start"
                                     )}
                                 >
@@ -265,7 +265,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="w-full justify-center"
+                            className="w-full justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                             onClick={() => setCollapsed(!collapsed)}
                         >
                             {collapsed ? (

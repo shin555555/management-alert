@@ -13,13 +13,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-          <LayoutDashboard className="w-5 h-5 text-primary" />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10">
+          <LayoutDashboard className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-extrabold tracking-tight">ダッシュボード</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             対応が必要なタスクとアラートの一覧
           </p>
         </div>

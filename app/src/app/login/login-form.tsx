@@ -14,21 +14,21 @@ export function LoginForm() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <div className="w-full max-w-sm">
         {/* ロゴ */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground mb-4 shadow-md">
-            <ShieldCheck className="w-7 h-7" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mb-4 shadow-lg shadow-primary/20">
+            <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">期限管理システム</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">期限管理システム</h1>
           <p className="text-sm text-muted-foreground mt-1">
             A型事業所向け 期限・進捗管理
           </p>
         </div>
 
         {/* フォーム */}
-        <div className="bg-card border border-border rounded-xl shadow-sm p-6">
+        <div className="bg-card rounded-2xl shadow-lg shadow-black/5 p-6">
           <h2 className="text-base font-semibold mb-5">スタッフログイン</h2>
           <form action={formAction} className="space-y-4">
             <div className="space-y-1.5">

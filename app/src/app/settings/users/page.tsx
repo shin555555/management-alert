@@ -19,19 +19,19 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-          <UserCog className="w-5 h-5 text-primary" />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10">
+          <UserCog className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">ユーザー管理</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-extrabold tracking-tight">ユーザー管理</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             スタッフアカウントの追加・パスワード変更・削除
           </p>
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-6">
+      <div className="rounded-2xl bg-card shadow-sm p-6">
         <UserList initialUsers={users} currentUserId={session.user.id} />
       </div>
     </div>

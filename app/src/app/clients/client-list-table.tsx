@@ -85,8 +85,8 @@ function SortableClientRow({ client }: { client: ClientListItem }) {
     <tr
       ref={setNodeRef}
       style={style}
-      className={`border-b last:border-0 hover:bg-muted/20 transition-colors ${
-        isDragging ? "opacity-50 bg-muted/30" : ""
+      className={`last:border-0 hover:bg-muted/10 transition-all duration-200 ${
+        isDragging ? "opacity-50 bg-muted/20" : ""
       }`}
     >
       {/* ドラッグハンドル */}
@@ -106,7 +106,7 @@ function SortableClientRow({ client }: { client: ClientListItem }) {
       >
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-medium">{client.name}</span>
+            <span className="font-semibold text-base tracking-tight">{client.name}</span>
             {client.branchName && (
               <Badge variant="outline" className="text-[10px]">
                 {client.branchName}
@@ -271,32 +271,32 @@ export function ClientListTable({ clients, branches }: ClientListTableProps) {
           label="全利用者"
           value={clients.length}
           icon={<Users className="w-4 h-4" />}
-          color="text-foreground bg-muted"
+          color="text-white bg-gradient-to-br from-primary to-primary/80"
         />
         <SummaryCard
           label="期限超過"
           value={clients.reduce((sum, c) => sum + c.taskSummary.overdue, 0)}
           icon={<AlertTriangle className="w-4 h-4" />}
-          color="text-red-600 bg-red-50 border-red-200"
+          color="text-red-700 bg-card"
         />
         <SummaryCard
           label="対応中"
           value={clients.reduce((sum, c) => sum + c.taskSummary.inProgress, 0)}
           icon={<Clock className="w-4 h-4" />}
-          color="text-orange-600 bg-orange-50 border-orange-200"
+          color="text-orange-600 bg-card"
         />
         <SummaryCard
           label="完了済み"
           value={clients.reduce((sum, c) => sum + c.taskSummary.completed, 0)}
           icon={<CheckCircle2 className="w-4 h-4" />}
-          color="text-green-600 bg-green-50 border-green-200"
+          color="text-emerald-600 bg-card"
         />
       </div>
 
       {/* テーブル */}
       {filteredClients.length > 0 ? (
         <div
-          className={`rounded-xl border bg-card overflow-hidden ${
+          className={`rounded-xl bg-card shadow-sm overflow-hidden ${
             isPending ? "opacity-70" : ""
           }`}
         >
@@ -307,7 +307,7 @@ export function ClientListTable({ clients, branches }: ClientListTableProps) {
           >
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-muted/30">
+                <tr className="bg-muted/20">
                   <th className="w-8"></th>
                   <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
                     利用者名
@@ -336,7 +336,7 @@ export function ClientListTable({ clients, branches }: ClientListTableProps) {
           </DndContext>
         </div>
       ) : (
-        <div className="rounded-xl border bg-card p-6">
+        <div className="rounded-xl bg-card shadow-sm p-6">
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Users className="w-12 h-12 mb-4 opacity-20" />
             {searchQuery ? (
@@ -374,12 +374,12 @@ function SummaryCard({
   color: string;
 }) {
   return (
-    <div className={`rounded-xl border p-3 ${color}`}>
+    <div className={`rounded-xl p-3 shadow-sm ${color} ${value === 0 ? "opacity-50 scale-[0.97]" : ""}`}>
       <div className="flex items-center gap-2 mb-1">
         {icon}
         <span className="text-xs font-medium opacity-80">{label}</span>
       </div>
-      <p className="text-2xl font-bold">{value}</p>
+      <p className={`font-bold ${value === 0 ? "text-lg" : "text-2xl"}`}>{value}</p>
     </div>
   );
 }

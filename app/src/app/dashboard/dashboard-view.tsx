@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
@@ -57,23 +57,23 @@ const ALERT_CONFIG = {
   red: {
     label: "期限切迫",
     icon: Flame,
-    cardColor: "text-red-700 bg-red-50 border-red-200",
+    cardColor: "text-red-700 bg-red-50/80",
     badgeClass: "bg-red-500 text-white",
     rowBorder: "border-l-red-500",
   },
   orange: {
     label: "要注意",
     icon: ShieldAlert,
-    cardColor: "text-orange-700 bg-orange-50 border-orange-200",
-    badgeClass: "bg-orange-400 text-white",
-    rowBorder: "border-l-orange-400",
+    cardColor: "text-orange-700/80 bg-white",
+    badgeClass: "bg-orange-400/80 text-white",
+    rowBorder: "border-l-orange-300",
   },
   yellow: {
     label: "警戒",
     icon: Timer,
-    cardColor: "text-yellow-700 bg-yellow-50 border-yellow-200",
-    badgeClass: "bg-yellow-400 text-black",
-    rowBorder: "border-l-yellow-400",
+    cardColor: "text-muted-foreground bg-white",
+    badgeClass: "bg-yellow-400/70 text-yellow-900",
+    rowBorder: "border-l-yellow-300",
   },
 };
 
@@ -206,32 +206,33 @@ export function DashboardView({ data }: DashboardViewProps) {
           label="期限切迫（緊急）"
           value={summary.red}
           icon={<Flame className="w-5 h-5" />}
-          color="text-red-700 bg-red-50 border-red-200"
+          color="text-white bg-gradient-to-br from-red-500 to-red-600"
           pulse={summary.red > 0}
+          accent
         />
         <SummaryCard
           label="要注意（中）"
           value={summary.orange}
           icon={<ShieldAlert className="w-5 h-5" />}
-          color="text-orange-700 bg-orange-50 border-orange-200"
+          color="text-orange-700 bg-card"
         />
         <SummaryCard
           label="警戒（低）"
           value={summary.yellow}
           icon={<Timer className="w-5 h-5" />}
-          color="text-yellow-700 bg-yellow-50 border-yellow-200"
+          color="text-muted-foreground bg-card"
         />
         <SummaryCard
           label="進行中"
           value={summary.inProgress + summary.overdue}
           icon={<Clock className="w-5 h-5" />}
-          color="text-blue-700 bg-blue-50 border-blue-200"
+          color="text-primary bg-card"
         />
       </div>
 
-      <div className="rounded-xl border bg-card">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="text-lg font-semibold">対応待ちタスク</h2>
+      <div className="rounded-2xl bg-card shadow-sm">
+        <div className="flex items-center justify-between px-5 py-4">
+          <h2 className="text-xl font-bold tracking-tight">対応待ちタスク</h2>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -257,7 +258,7 @@ export function DashboardView({ data }: DashboardViewProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 px-5 py-3 border-b bg-muted/20 md:flex-row md:items-center">
+        <div className="flex flex-col gap-2 px-5 py-3 bg-muted/30 md:flex-row md:items-center">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">項目</span>
             <Select value={templateFilter} onValueChange={setTemplateFilter}>
@@ -346,7 +347,7 @@ function MonthSection({ group, isOpen, onToggle }: MonthSectionProps) {
         type="button"
         aria-expanded={isOpen}
         onClick={onToggle}
-        className={`w-full flex items-center gap-3 px-5 py-3 border-l-4 hover:bg-muted/40 transition-colors cursor-pointer ${headerBorder}`}
+        className={`w-full flex items-center gap-3 px-5 py-3 border-l-2 hover:bg-muted/30 transition-all duration-200 cursor-pointer ${headerBorder}`}
       >
         {isOpen ? (
           <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -397,7 +398,7 @@ function MonthSection({ group, isOpen, onToggle }: MonthSectionProps) {
       </button>
 
       {isOpen && (
-        <div className="divide-y bg-muted/10">
+        <div className="bg-muted/5">
           {group.tasks.map((task) => (
             <TaskRow key={task.id} task={task} />
           ))}
@@ -413,25 +414,32 @@ function SummaryCard({
   icon,
   color,
   pulse = false,
+  accent = false,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
   pulse?: boolean;
+  accent?: boolean;
 }) {
+  const isEmpty = value === 0;
   return (
     <div
-      className={`rounded-xl border p-5 transition-all ${color} ${
+      className={`rounded-2xl p-5 transition-all duration-300 ${
+        accent ? "shadow-lg shadow-red-500/20" : "shadow-sm"
+      } ${
+        isEmpty && !accent ? "opacity-40 scale-[0.97]" : ""
+      } ${color} ${
         pulse && value > 0 ? "animate-pulse" : ""
       }`}
     >
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-2">
         {icon}
-        <p className="text-sm font-medium opacity-80">{label}</p>
+        <p className={`font-medium ${isEmpty ? "text-xs" : "text-sm"} ${accent ? "opacity-90" : "opacity-70"}`}>{label}</p>
       </div>
-      <p className="text-3xl font-bold mt-1">{value}</p>
-      <p className="text-xs mt-1 opacity-60">件</p>
+      <p className={`font-extrabold tracking-tight ${isEmpty ? "text-2xl" : "text-4xl"}`}>{value}</p>
+      <p className={`text-xs mt-1 ${accent ? "opacity-60" : "opacity-40"}`}>件</p>
     </div>
   );
 }
@@ -483,7 +491,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
 
   return (
     <div
-      className={`flex items-center gap-4 px-5 py-3.5 pl-10 border-l-4 hover:bg-muted/30 transition-colors ${borderColor}`}
+      className={`flex items-center gap-4 px-5 py-3.5 pl-10 border-l-2 hover:bg-muted/20 transition-all duration-200 ${borderColor}`}
     >
       <div className="w-14 shrink-0">
         {alertConfig ? (
@@ -509,13 +517,13 @@ function TaskRow({ task }: { task: DashboardTask }) {
         <div className="flex items-center gap-2">
           <Link
             href={`/clients/${task.clientId}`}
-            className="text-sm font-medium hover:underline truncate"
+            className="text-base font-bold hover:underline truncate tracking-tight"
             onClick={(e) => e.stopPropagation()}
           >
             {task.clientName}
           </Link>
-          <span className="text-muted-foreground">・</span>
-          <span className="text-sm text-muted-foreground truncate">
+          <span className="text-muted-foreground/40">|</span>
+          <span className="text-xs text-muted-foreground truncate">
             {task.templateName}
           </span>
         </div>
