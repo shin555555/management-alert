@@ -4,10 +4,12 @@ import React, { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertOctagon,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
+  Eye,
   LayoutDashboard,
   RotateCcw,
   Users,
@@ -27,6 +29,7 @@ import {
 import {
   type DashboardData,
   type DashboardTask,
+  type EarlyAlertItem,
 } from "./actions";
 import { updateTaskStatus } from "../clients/actions";
 import { startOfDay } from "date-fns";
@@ -201,34 +204,62 @@ export function DashboardView({ data }: DashboardViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard
-          label="期限切迫（緊急）"
-          value={summary.red}
-          icon={<Flame className="w-5 h-5" />}
-          color="text-white bg-gradient-to-br from-red-500 to-red-600"
-          pulse={summary.red > 0}
-          accent
-        />
-        <SummaryCard
-          label="要注意（中）"
-          value={summary.orange}
-          icon={<ShieldAlert className="w-5 h-5" />}
-          color="text-orange-700 bg-card"
-        />
-        <SummaryCard
-          label="警戒（低）"
-          value={summary.yellow}
-          icon={<Timer className="w-5 h-5" />}
-          color="text-muted-foreground bg-card"
-        />
-        <SummaryCard
-          label="進行中"
-          value={summary.inProgress + summary.overdue}
-          icon={<Clock className="w-5 h-5" />}
-          color="text-primary bg-card"
-        />
-      </div>
+      {data.earlyAlerts.length > 0 && (
+        <EarlyAlertBanner alerts={data.earlyAlerts} />
+      )}
+      {summary.totalActive > 0 ? (
+        <div className="flex flex-wrap gap-4">
+          {summary.overdue > 0 && (
+            <SummaryCard
+              label="期限超過"
+              value={summary.overdue}
+              icon={<AlertOctagon className="w-5 h-5" />}
+              color="text-white bg-gradient-to-br from-rose-700 to-rose-900"
+              shadowColor="shadow-rose-800/30"
+              pulse
+            />
+          )}
+          {summary.red > 0 && (
+            <SummaryCard
+              label="期限切迫"
+              value={summary.red}
+              icon={<Flame className="w-5 h-5" />}
+              color="text-white bg-gradient-to-br from-red-500 to-red-600"
+              shadowColor="shadow-red-500/20"
+            />
+          )}
+          {summary.orange > 0 && (
+            <SummaryCard
+              label="要注意"
+              value={summary.orange}
+              icon={<ShieldAlert className="w-5 h-5" />}
+              color="text-orange-700 bg-orange-50 border border-orange-200"
+            />
+          )}
+          {summary.yellow > 0 && (
+            <SummaryCard
+              label="警戒"
+              value={summary.yellow}
+              icon={<Timer className="w-5 h-5" />}
+              color="text-yellow-700 bg-yellow-50 border border-yellow-200"
+            />
+          )}
+          {summary.inProgress > 0 && (
+            <SummaryCard
+              label="進行中"
+              value={summary.inProgress}
+              icon={<Clock className="w-5 h-5" />}
+              color="text-primary bg-card border border-border"
+            />
+          )}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200/60 p-8 text-center">
+          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+          <p className="text-lg font-bold text-emerald-800">すべて順調です</p>
+          <p className="text-sm text-emerald-600/70 mt-1">現在対応が必要なアラートはありません</p>
+        </div>
+      )}
 
       <div className="rounded-2xl bg-card shadow-sm">
         <div className="flex items-center justify-between px-5 py-4">
@@ -333,13 +364,15 @@ interface MonthSectionProps {
 function MonthSection({ group, isOpen, onToggle }: MonthSectionProps) {
   const { summary } = group;
 
-  const headerBorder = summary.red > 0 || summary.overdue > 0
-    ? "border-l-red-500"
-    : summary.orange > 0
-      ? "border-l-orange-400"
-      : summary.yellow > 0
-        ? "border-l-yellow-400"
-        : "border-l-gray-200";
+  const headerBorder = summary.overdue > 0
+    ? "border-l-rose-700"
+    : summary.red > 0
+      ? "border-l-red-500"
+      : summary.orange > 0
+        ? "border-l-orange-400"
+        : summary.yellow > 0
+          ? "border-l-yellow-400"
+          : "border-l-gray-200";
 
   return (
     <div>
@@ -365,8 +398,8 @@ function MonthSection({ group, isOpen, onToggle }: MonthSectionProps) {
 
         <div className="flex items-center gap-1.5 ml-auto">
           {summary.overdue > 0 && (
-            <Badge variant="destructive" className="text-[10px]">
-              遅延 {summary.overdue}
+            <Badge className="text-[10px] bg-rose-700 text-white">
+              期限超過 {summary.overdue}
             </Badge>
           )}
           {summary.red > 0 && (
@@ -413,33 +446,30 @@ function SummaryCard({
   value,
   icon,
   color,
+  shadowColor,
   pulse = false,
-  accent = false,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
+  shadowColor?: string;
   pulse?: boolean;
-  accent?: boolean;
 }) {
-  const isEmpty = value === 0;
   return (
     <div
-      className={`rounded-2xl p-5 transition-all duration-300 ${
-        accent ? "shadow-lg shadow-red-500/20" : "shadow-sm"
-      } ${
-        isEmpty && !accent ? "opacity-40 scale-[0.97]" : ""
+      className={`flex-1 min-w-[150px] rounded-2xl p-5 transition-all duration-300 ${
+        shadowColor ? `shadow-lg ${shadowColor}` : "shadow-sm"
       } ${color} ${
-        pulse && value > 0 ? "animate-pulse" : ""
+        pulse ? "animate-pulse" : ""
       }`}
     >
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <p className={`font-medium ${isEmpty ? "text-xs" : "text-sm"} ${accent ? "opacity-90" : "opacity-70"}`}>{label}</p>
+        <p className="font-medium text-sm opacity-80">{label}</p>
       </div>
-      <p className={`font-extrabold tracking-tight ${isEmpty ? "text-2xl" : "text-4xl"}`}>{value}</p>
-      <p className={`text-xs mt-1 ${accent ? "opacity-60" : "opacity-40"}`}>件</p>
+      <p className="font-extrabold tracking-tight text-4xl">{value}</p>
+      <p className="text-xs mt-1 opacity-40">件</p>
     </div>
   );
 }
@@ -477,10 +507,11 @@ function TaskRow({ task }: { task: DashboardTask }) {
     : null;
   const firstStatus = statusFlow[0];
   const isWaiting = task.currentStatus === firstStatus;
-  const borderColor = alertConfig
-    ? alertConfig.rowBorder
-    : isOverdue
-      ? "border-l-red-300"
+  // 期限超過はalertLevelより優先して表示
+  const borderColor = isOverdue
+    ? "border-l-rose-700"
+    : alertConfig
+      ? alertConfig.rowBorder
       : isWaiting
         ? "border-l-gray-300"
         : "border-l-blue-300";
@@ -494,13 +525,13 @@ function TaskRow({ task }: { task: DashboardTask }) {
       className={`flex items-center gap-4 px-5 py-3.5 pl-10 border-l-2 hover:bg-muted/20 transition-all duration-200 ${borderColor}`}
     >
       <div className="w-14 shrink-0">
-        {alertConfig ? (
+        {isOverdue ? (
+          <Badge className="text-[10px] bg-rose-700 text-white">
+            期限超過
+          </Badge>
+        ) : alertConfig ? (
           <Badge className={`text-[10px] ${alertConfig.badgeClass}`}>
             {alertConfig.label}
-          </Badge>
-        ) : isOverdue ? (
-          <Badge variant="destructive" className="text-[10px]">
-            遅延
           </Badge>
         ) : isWaiting ? (
           <Badge variant="outline" className="text-[10px]">
@@ -598,3 +629,68 @@ function TaskRow({ task }: { task: DashboardTask }) {
   );
 }
 
+// ========================================
+// 施設外 早期確認バナー
+// ========================================
+function EarlyAlertBanner({ alerts }: { alerts: EarlyAlertItem[] }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/90 shadow-md shadow-violet-100/50">
+      <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-violet-500 to-indigo-500" />
+
+      <div className="pl-6 pr-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100">
+            <Eye className="w-4 h-4 text-violet-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-violet-900 tracking-tight">
+              施設外 早期確認
+            </h3>
+            <p className="text-[11px] text-violet-500">
+              期限10週間前の管理項目
+            </p>
+          </div>
+          <Badge className="ml-auto bg-violet-100 text-violet-700 hover:bg-violet-100 text-xs font-semibold">
+            {alerts.length}件
+          </Badge>
+        </div>
+
+        <div className="mt-3 space-y-1">
+          {alerts.map((alert) => {
+            const isOverdue = alert.daysUntil < 0;
+            return (
+              <Link
+                key={alert.id}
+                href={`/clients/${alert.clientId}`}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-violet-50/80 transition-colors group"
+              >
+                <span className="text-sm font-semibold text-violet-900 min-w-[5rem] truncate">
+                  {alert.clientName}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] shrink-0 border-violet-200 text-violet-600"
+                >
+                  {alert.templateName}
+                </Badge>
+                <span className="text-xs text-violet-400 ml-auto shrink-0 hidden sm:inline">
+                  {formatToWareki(new Date(alert.endDate))}
+                </span>
+                <span
+                  className={`text-xs font-medium shrink-0 ${
+                    isOverdue ? "text-red-500" : "text-violet-600"
+                  }`}
+                >
+                  {isOverdue
+                    ? `${Math.abs(alert.daysUntil)}日超過`
+                    : `残${alert.daysUntil}日`}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-violet-300 group-hover:text-violet-500 transition-colors shrink-0" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

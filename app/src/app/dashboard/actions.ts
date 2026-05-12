@@ -38,9 +38,22 @@ export interface DashboardSummary {
   totalActive: number;
 }
 
+export interface EarlyAlertItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  branchName: string;
+  templateName: string;
+  endDate: Date;
+  currentStatus: string;
+  statusFlow: string[];
+  daysUntil: number;
+}
+
 export interface DashboardData {
   summary: DashboardSummary;
   tasks: DashboardTask[];
+  earlyAlerts: EarlyAlertItem[];
 }
 
 // ========================================
@@ -55,7 +68,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         completedAt: null,
       },
       include: {
-        client: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true, branch: { select: { name: true } } } },
         template: true,
       },
       orderBy: { endDate: "asc" },
@@ -97,19 +110,58 @@ export async function getDashboardData(): Promise<DashboardData> {
       return !isCompleted;
     });
 
-    // サマリー計算
+    // サマリー計算（期限超過を独立カテゴリとして分離）
+    // 期限超過はalertLevelに関係なく、endDateが過ぎたすべてのタスクを対象
     const summary: DashboardSummary = {
-      red: filteredTasks.filter((t) => t.alertLevel === "red").length,
-      orange: filteredTasks.filter((t) => t.alertLevel === "orange").length,
-      yellow: filteredTasks.filter((t) => t.alertLevel === "yellow").length,
+      overdue: filteredTasks.filter((t) => new Date(t.endDate) < now).length,
+      red: filteredTasks.filter((t) => t.alertLevel === "red" && new Date(t.endDate) >= now).length,
+      orange: filteredTasks.filter((t) => t.alertLevel === "orange" && new Date(t.endDate) >= now).length,
+      yellow: filteredTasks.filter((t) => t.alertLevel === "yellow" && new Date(t.endDate) >= now).length,
       inProgress: filteredTasks.filter((t) => !t.alertLevel && new Date(t.endDate) >= now).length,
-      overdue: filteredTasks.filter(
-        (t) => new Date(t.endDate) < now && !t.alertLevel
-      ).length,
       totalActive: filteredTasks.length,
     };
 
-    return { summary, tasks: filteredTasks };
+    // ========================================
+    // 施設外 早期アラート抽出（期限10週間以内）
+    // ========================================
+    const EARLY_ALERT_DAYS = 10 * 7; // 10週間 = 70日
+    const EARLY_ALERT_TEMPLATES = ["個別支援計画", "在宅利用期間"];
+    const EARLY_ALERT_BRANCH = "施設外";
+
+    const earlyAlerts: EarlyAlertItem[] = [];
+
+    for (const ct of clientTasks) {
+      const branchName = ct.client.branch?.name;
+      if (branchName !== EARLY_ALERT_BRANCH) continue;
+      if (!EARLY_ALERT_TEMPLATES.includes(ct.template.name)) continue;
+
+      const statusFlow = ct.template.statusFlow as unknown as string[];
+      const lastStatus = statusFlow[statusFlow.length - 1];
+      if (ct.currentStatus === lastStatus) continue;
+
+      const endDate = new Date(ct.endDate);
+      const daysUntil = Math.ceil(
+        (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysUntil <= EARLY_ALERT_DAYS) {
+        earlyAlerts.push({
+          id: ct.id,
+          clientId: ct.client.id,
+          clientName: ct.client.name,
+          branchName: EARLY_ALERT_BRANCH,
+          templateName: ct.template.name,
+          endDate: ct.endDate,
+          currentStatus: ct.currentStatus,
+          statusFlow,
+          daysUntil,
+        });
+      }
+    }
+
+    earlyAlerts.sort((a, b) => a.daysUntil - b.daysUntil);
+
+    return { summary, tasks: filteredTasks, earlyAlerts };
   } catch (error) {
     console.error("ダッシュボードデータ取得エラー:", error);
     return {
@@ -122,6 +174,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         totalActive: 0,
       },
       tasks: [],
+      earlyAlerts: [],
     };
   }
 }
