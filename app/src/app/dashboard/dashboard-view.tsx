@@ -162,16 +162,32 @@ export function DashboardView({ data }: DashboardViewProps) {
 
   const [templateFilter, setTemplateFilter] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("priority");
+  const [categoryFilter, setCategoryFilter] = useState<"overdue" | "red" | "orange" | "yellow" | "inProgress" | null>(null);
 
   const templateOptions = useMemo(
     () => [...new Set(tasks.map((t) => t.templateName))].sort((a, b) => a.localeCompare(b, "ja")),
     [tasks]
   );
 
-  const filteredTasks = useMemo(
-    () => (templateFilter === "all" ? tasks : tasks.filter((task) => task.templateName === templateFilter)),
-    [tasks, templateFilter]
-  );
+  const filteredTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter((task) => {
+      // 1. テンプレート絞り込み
+      if (templateFilter !== "all" && task.templateName !== templateFilter) return false;
+      
+      // 2. カテゴリ（カード）絞り込み
+      if (categoryFilter) {
+        const isOverdue = startOfDay(new Date(task.endDate)) < startOfDay(now);
+        if (categoryFilter === "overdue" && !isOverdue) return false;
+        if (categoryFilter === "red" && (isOverdue || task.alertLevel !== "red")) return false;
+        if (categoryFilter === "orange" && (isOverdue || task.alertLevel !== "orange")) return false;
+        if (categoryFilter === "yellow" && (isOverdue || task.alertLevel !== "yellow")) return false;
+        if (categoryFilter === "inProgress" && (isOverdue || task.alertLevel)) return false;
+      }
+      
+      return true;
+    });
+  }, [tasks, templateFilter, categoryFilter]);
 
   const monthGroups = useMemo(
     () => groupTasksByMonth(filteredTasks, sortMode),
@@ -200,6 +216,7 @@ export function DashboardView({ data }: DashboardViewProps) {
   const resetView = () => {
     setTemplateFilter("all");
     setSortMode("priority");
+    setCategoryFilter(null);
   };
 
   return (
@@ -216,7 +233,11 @@ export function DashboardView({ data }: DashboardViewProps) {
               icon={<AlertOctagon className="w-5 h-5" />}
               color="text-white bg-gradient-to-br from-rose-700 to-rose-900"
               shadowColor="shadow-rose-800/30"
+              ringColor="ring-rose-500"
               pulse
+              onClick={() => setCategoryFilter(categoryFilter === "overdue" ? null : "overdue")}
+              isActive={categoryFilter === "overdue"}
+              hasActiveFilter={categoryFilter !== null}
             />
           )}
           {summary.red > 0 && (
@@ -226,6 +247,10 @@ export function DashboardView({ data }: DashboardViewProps) {
               icon={<Flame className="w-5 h-5" />}
               color="text-white bg-gradient-to-br from-red-500 to-red-600"
               shadowColor="shadow-red-500/20"
+              ringColor="ring-red-500"
+              onClick={() => setCategoryFilter(categoryFilter === "red" ? null : "red")}
+              isActive={categoryFilter === "red"}
+              hasActiveFilter={categoryFilter !== null}
             />
           )}
           {summary.orange > 0 && (
@@ -234,6 +259,10 @@ export function DashboardView({ data }: DashboardViewProps) {
               value={summary.orange}
               icon={<ShieldAlert className="w-5 h-5" />}
               color="text-orange-700 bg-orange-50 border border-orange-200"
+              ringColor="ring-orange-400"
+              onClick={() => setCategoryFilter(categoryFilter === "orange" ? null : "orange")}
+              isActive={categoryFilter === "orange"}
+              hasActiveFilter={categoryFilter !== null}
             />
           )}
           {summary.yellow > 0 && (
@@ -242,6 +271,10 @@ export function DashboardView({ data }: DashboardViewProps) {
               value={summary.yellow}
               icon={<Timer className="w-5 h-5" />}
               color="text-yellow-700 bg-yellow-50 border border-yellow-200"
+              ringColor="ring-yellow-400"
+              onClick={() => setCategoryFilter(categoryFilter === "yellow" ? null : "yellow")}
+              isActive={categoryFilter === "yellow"}
+              hasActiveFilter={categoryFilter !== null}
             />
           )}
           {summary.inProgress > 0 && (
@@ -250,6 +283,10 @@ export function DashboardView({ data }: DashboardViewProps) {
               value={summary.inProgress}
               icon={<Clock className="w-5 h-5" />}
               color="text-primary bg-card border border-border"
+              ringColor="ring-primary"
+              onClick={() => setCategoryFilter(categoryFilter === "inProgress" ? null : "inProgress")}
+              isActive={categoryFilter === "inProgress"}
+              hasActiveFilter={categoryFilter !== null}
             />
           )}
         </div>
@@ -447,19 +484,32 @@ function SummaryCard({
   icon,
   color,
   shadowColor,
+  ringColor = "ring-primary",
   pulse = false,
+  onClick,
+  isActive = false,
+  hasActiveFilter = false,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
   shadowColor?: string;
+  ringColor?: string;
   pulse?: boolean;
+  onClick?: () => void;
+  isActive?: boolean;
+  hasActiveFilter?: boolean;
 }) {
   return (
-    <div
-      className={`flex-1 min-w-[150px] rounded-2xl p-5 transition-all duration-300 ${
-        shadowColor ? `shadow-lg ${shadowColor}` : "shadow-sm"
+    <button
+      onClick={onClick}
+      className={`flex-1 min-w-[150px] rounded-2xl p-5 text-left transition-all duration-300 ${
+        isActive ? `ring-4 ring-offset-2 ${ringColor}` : ""
+      } ${
+        hasActiveFilter && !isActive ? "opacity-40 scale-[0.98]" : "hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+      } ${
+        shadowColor ? `shadow-md ${shadowColor}` : "shadow-sm"
       } ${color} ${
         pulse ? "animate-pulse" : ""
       }`}
@@ -470,7 +520,7 @@ function SummaryCard({
       </div>
       <p className="font-extrabold tracking-tight text-4xl">{value}</p>
       <p className="text-xs mt-1 opacity-40">件</p>
-    </div>
+    </button>
   );
 }
 
