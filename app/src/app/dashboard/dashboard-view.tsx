@@ -693,11 +693,17 @@ function EarlyAlertBanner({ alerts }: { alerts: EarlyAlertItem[] }) {
             <Eye className="w-4 h-4 text-violet-600" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-violet-900 tracking-tight">
-              施設外 早期確認
-            </h3>
-            <p className="text-[11px] text-violet-500">
-              期限10週間前の管理項目
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-violet-900 tracking-tight">
+                施設外 早期確認
+              </h3>
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-violet-200 text-violet-600 bg-white/60">個別支援計画</Badge>
+                <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-violet-200 text-violet-600 bg-white/60">在宅利用期間</Badge>
+              </div>
+            </div>
+            <p className="text-[11px] text-violet-500 mt-0.5">
+              期限10週間前
             </p>
           </div>
           <Badge className="ml-auto bg-violet-100 text-violet-700 hover:bg-violet-100 text-xs font-semibold">
